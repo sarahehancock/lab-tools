@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cell Culture Plating Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--orange:#f0883e;--red:#f85149;--teal:#39d353;
+  --muted:#8b949e;--text:#e6edf3;--text2:#c9d1d9;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{font-family:var(--mono);font-weight:600;color:var(--accent);font-size:13px}
+.badge{background:rgba(57,211,83,.12);color:var(--teal);border:1px solid rgba(57,211,83,.3);padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--mono)}
+.tabs{display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);padding:0 16px;flex-shrink:0}
+.tab{padding:10px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none;flex:1;overflow-y:auto;padding:18px 20px}
+.tab-content.active{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.card-body{padding:14px}
+label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+input,select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--accent)}
+.f{margin-bottom:10px}.f:last-child{margin-bottom:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--accent);color:#0d1117}.btn-p:hover{background:#79c0ff}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.sep{height:1px;background:var(--border);margin:8px 0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid{display:flex;gap:16px;flex-wrap:wrap}
+.grow{flex:1;min-width:240px}
+
+.res-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px}
+.res-val{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent)}
+.res-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.stat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 12px;min-width:110px}
+.sv{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent)}
+.sl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+.notice{padding:8px 12px;border-radius:6px;font-size:11px;margin-bottom:8px}
+.ni{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--accent)}
+.nw{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange)}
+.ns{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+
+table.dtbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+table.dtbl th{background:var(--surface2);color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+table.dtbl td{padding:6px 10px;border-bottom:1px solid rgba(48,54,61,.4)}
+table.dtbl tr:last-child td{border-bottom:none}
+
+/* Plate layout visual */
+.plate-vis{display:grid;gap:3px;width:max-content}
+.pwell{border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--mono);font-weight:600;cursor:default;border:1.5px solid}
+.pwell.filled{background:rgba(57,211,83,.2);border-color:rgba(57,211,83,.5);color:var(--teal)}
+.pwell.empty{background:var(--surface2);border-color:var(--border);color:var(--muted)}
+.pwell.treat{background:rgba(88,166,255,.2);border-color:rgba(88,166,255,.5);color:var(--accent)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⬡ LAB·TOOLS</div>
+  <div class="badge">Cell Culture Plating</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('seeding')">🌱 Seeding Density</div>
+  <div class="tab" onclick="switchTab('dilution')">🔢 Serial Dilutions</div>
+  <div class="tab" onclick="switchTab('transfection')">💉 Transfection / Treatment</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-s tab-export" id="export-seeding"  onclick="exportSeeding()"      style="margin:6px 4px 6px 0;font-size:11px">⬇ Export</button>
+  <button class="btn btn-s tab-export" id="export-dilution" onclick="exportDilution()"     style="margin:6px 4px 6px 0;font-size:11px;display:none">⬇ Export</button>
+  <button class="btn btn-s tab-export" id="export-transfection" onclick="exportTransfection()" style="margin:6px 4px 6px 0;font-size:11px;display:none">⬇ Export</button>
+</div>
+
+<!-- ── TAB 1: Seeding Density ── -->
+<div class="tab-content active" id="tab-seeding">
+  <div class="grid">
+    <div class="card grow">
+      <div class="card-head">⚙ Parameters</div>
+      <div class="card-body">
+        <div class="f">
+          <label>Vessel Type</label>
+          <select id="s-vessel" onchange="calcSeeding()">
+            <optgroup label="Dishes">
+              <option value="100mm">100 mm dish (≈57 cm²)</option>
+              <option value="60mm">60 mm dish (≈21 cm²)</option>
+              <option value="35mm">35 mm dish (≈8 cm²)</option>
+            </optgroup>
+            <optgroup label="Flasks">
+              <option value="T175">T-175 flask (175 cm²)</option>
+              <option value="T75">T-75 flask (75 cm²)</option>
+              <option value="T25">T-25 flask (25 cm²)</option>
+            </optgroup>
+            <optgroup label="Well Plates">
+              <option value="6wp">6-well plate (≈9.6 cm²/well)</option>
+              <option value="12wp">12-well plate (≈3.8 cm²/well)</option>
+              <option value="24wp" selected>24-well plate (≈1.9 cm²/well)</option>
+              <option value="48wp">48-well plate (≈0.95 cm²/well)</option>
+              <option value="96wp">96-well plate (≈0.32 cm²/well)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="f">
+          <label>Number of Wells / Vessels</label>
+          <input type="number" id="s-n-vessels" value="6" min="1" oninput="calcSeeding()">
+        </div>
+        <div class="f">
+          <label>Target Cells per Well / Vessel</label>
+          <input type="number" id="s-density" value="50000" min="1" step="1" oninput="calcSeeding()">
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Stock Cell Count (cells/mL)</label>
+          <input type="number" id="s-stock-count" value="500000" min="1000" oninput="calcSeeding()">
+        </div>
+        <div class="f">
+          <label>Media Volume per Vessel (mL)</label>
+          <input type="number" id="s-media-vol" value="0.5" min="0.1" step="0.1" oninput="calcSeeding()">
+        </div>
+        <div class="f">
+          <label>Dead Volume / Overage (%)</label>
+          <input type="number" id="s-overage" value="10" min="0" max="50" oninput="calcSeeding()">
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Stock aliquot size (mL)</label>
+          <select id="s-aliquot" onchange="calcSeeding()">
+            <option value="auto">Auto — find best fit</option>
+            <option value="0.25">0.25 mL</option>
+            <option value="0.5">0.5 mL</option>
+            <option value="0.75">0.75 mL</option>
+            <option value="1">1.0 mL</option>
+            <option value="1.5">1.5 mL</option>
+            <option value="2">2.0 mL</option>
+            <option value="2.5">2.5 mL</option>
+            <option value="3">3.0 mL</option>
+            <option value="4">4.0 mL</option>
+            <option value="5">5.0 mL</option>
+          </select>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Measurable with a serological pipette · auto scales up as needed</div>
+        </div>
+      </div>
+    </div>
+    <div class="grow" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-head">📊 Results</div>
+        <div class="card-body">
+          <div class="stat-row" id="seeding-stats"></div>
+          <div id="seeding-notice"></div>
+          <div class="res-box" id="seeding-protocol" style="font-family:var(--mono);font-size:11px;line-height:1.8;color:var(--text2)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 2: Serial Dilutions ── -->
+<div class="tab-content" id="tab-dilution">
+  <div class="grid">
+    <div class="card grow">
+      <div class="card-head">⚙ Parameters</div>
+      <div class="card-body">
+        <div class="f">
+          <label>Starting Concentration</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="d-start-conc" value="10000" min="0" step="any" oninput="calcDilution()" style="flex:1">
+            <select id="d-unit" onchange="calcDilution()" style="width:90px">
+              <option value="nM">nM</option>
+              <option value="µM" selected>µM</option>
+              <option value="mM">mM</option>
+              <option value="µg/mL">µg/mL</option>
+              <option value="mg/mL">mg/mL</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="f">
+            <label>Dilution Factor</label>
+            <input type="number" id="d-factor" value="10" min="2" step="any" oninput="calcDilution()">
+          </div>
+          <div class="f">
+            <label>Number of Steps</label>
+            <input type="number" id="d-steps" value="6" min="2" max="16" oninput="calcDilution()">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="f">
+            <label>Volume per Step (µL)</label>
+            <input type="number" id="d-vol" value="200" min="10" oninput="calcDilution()">
+          </div>
+          <div class="f">
+            <label>Replicates</label>
+            <input type="number" id="d-reps" value="3" min="1" oninput="calcDilution()">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card grow">
+      <div class="card-head">📋 Dilution Scheme</div>
+      <div class="card-body" style="overflow-x:auto">
+        <div id="dilution-table"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 3: Transfection / Treatment ── -->
+<div class="tab-content" id="tab-transfection">
+  <div class="grid">
+    <div class="card grow">
+      <div class="card-head">⚙ Plate Setup</div>
+      <div class="card-body">
+        <div class="f">
+          <label>Plate Format</label>
+          <select id="t-plate" onchange="calcTransfection()">
+            <option value="6">6-well</option>
+            <option value="12">12-well</option>
+            <option value="24" selected>24-well</option>
+            <option value="48">48-well</option>
+            <option value="96">96-well</option>
+          </select>
+        </div>
+        <div class="f">
+          <label>Conditions (treatments)</label>
+          <input type="number" id="t-conditions" value="4" min="1" max="24" oninput="calcTransfection()">
+        </div>
+        <div class="f">
+          <label>Replicates per Condition</label>
+          <input type="number" id="t-reps" value="3" min="1" max="16" oninput="calcTransfection()">
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Reagent per Well (µL)</label>
+          <input type="number" id="t-reagent" value="1.5" min="0" step="0.1" oninput="calcTransfection()">
+        </div>
+        <div class="f">
+          <label>Diluent per Well (µL)</label>
+          <input type="number" id="t-diluent" value="48.5" min="0" step="0.1" oninput="calcTransfection()">
+        </div>
+        <div class="f">
+          <label>Overage (%)</label>
+          <input type="number" id="t-overage" value="10" min="0" max="50" oninput="calcTransfection()">
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Condition Labels (one per line)</label>
+          <textarea id="t-labels" rows="5" placeholder="Control&#10;siRNA 1&#10;siRNA 2&#10;siRNA 3" oninput="calcTransfection()" style="font-size:11px;resize:vertical"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="grow" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-head">📊 Master Mix per Condition</div>
+        <div class="card-body">
+          <div id="transfection-stats" class="stat-row"></div>
+          <div id="transfection-table" style="overflow-x:auto;margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">🗺 Plate Layout</div>
+        <div class="card-body">
+          <div id="plate-layout" style="overflow-x:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Vessel data ────────────────────────────────────────────────────────────────
+const VESSELS={
+  '100mm':{area:57,name:'100 mm dish'},'60mm':{area:21,name:'60 mm dish'},'35mm':{area:8,name:'35 mm dish'},
+  'T175':{area:175,name:'T-175'},'T75':{area:75,name:'T-75'},'T25':{area:25,name:'T-25'},
+  '6wp':{area:9.6,name:'6-well'},'12wp':{area:3.8,name:'12-well'},'24wp':{area:1.9,name:'24-well'},
+  '48wp':{area:0.95,name:'48-well'},'96wp':{area:0.32,name:'96-well'},
+};
+const PLATE_DIMS={'6':{r:2,c:3},'12':{r:3,c:4},'24':{r:4,c:6},'48':{r:6,c:8},'96':{r:8,c:12}};
+const WELL_VOLS={'6':2000,'12':500,'24':500,'48':200,'96':200};
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['seeding','dilution','transfection'];
+    t.classList.toggle('active',names[i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  ['seeding','dilution','transfection'].forEach(n=>{
+    const btn=document.getElementById('export-'+n);
+    if(btn) btn.style.display=n===name?'':'none';
+  });
+}
+
+// ── Seeding Density ────────────────────────────────────────────────────────────
+function calcSeeding(){
+  const v=VESSELS[document.getElementById('s-vessel').value];
+  const n=parseInt(document.getElementById('s-n-vessels').value)||1;
+  const density=parseFloat(document.getElementById('s-density').value)||50000;
+  const stock=parseFloat(document.getElementById('s-stock-count').value)||500000; // cells/mL
+  const mediaVol=parseFloat(document.getElementById('s-media-vol').value)||0.5;   // mL per vessel
+  const overage=parseFloat(document.getElementById('s-overage').value)||10;
+  const aliquotPref=document.getElementById('s-aliquot').value;
+
+  const cellsPerVessel=density;              // now entered directly as cells/vessel
+  const cellsPerCm2=cellsPerVessel/v.area;   // derived for display
+  const totalCells=cellsPerVessel*n;
+  const withOverage=totalCells*(1+overage/100); // cells needed with overage
+
+  // Exact stock volume needed (mL)
+  const exactStockMl=withOverage/stock; // mL of stock to take
+
+  // Serological-friendly aliquot ladder: 0.25 steps to 1, 0.5 steps to 5, 1 step to 10
+  const ALIQUOTS=(function(){
+    const a=[]; let v=0.25;
+    while(v<=10.001){
+      a.push(Math.round(v*100)/100);
+      if(v<1) v+=0.25;
+      else if(v<5) v+=0.5;
+      else v+=1;
+    }
+    return a;
+  })();
+
+  let chosenAliquot, totalVolMl, actualCells;
+
+  if(aliquotPref==='auto'){
+    // Iterate smallest to largest — pick first aliquot that covers all n vessels
+    // targetConcPerMl = desired cells/mL in working suspension
+    const targetConcPerMl = cellsPerVessel / mediaVol;
+    chosenAliquot = null;
+    for(const aq of [...ALIQUOTS].sort((a,b)=>a-b)){  // smallest first
+      const rawTotal = (aq * stock) / targetConcPerMl;
+      const ceiled = Math.ceil(rawTotal * 10) / 10;    // always round UP to 0.1 mL
+      const vessels = Math.floor((ceiled + 0.001) / mediaVol);
+      if(vessels >= n){
+        chosenAliquot = aq;
+        totalVolMl = ceiled;
+        actualCells = aq * stock;
+        break;
+      }
+    }
+    if(!chosenAliquot){
+      // No standard aliquot is sufficient — use 1 mL and warn
+      const aq = 1;
+      const rawTotal = (aq * stock) / targetConcPerMl;
+      chosenAliquot = aq;
+      totalVolMl = Math.ceil(rawTotal * 10) / 10;
+      actualCells = aq * stock;
+    }
+  } else {
+    chosenAliquot=parseFloat(aliquotPref);
+    const cellsInAliquot=chosenAliquot*stock;
+    const targetConcPerMl=cellsPerVessel/mediaVol;  // cells/mL in working suspension
+    const rawTotal=cellsInAliquot/targetConcPerMl;
+    totalVolMl=Math.ceil(rawTotal*10)/10; // ceil to 0.1 mL — always enough for n vessels
+    actualCells=cellsInAliquot;
+  }
+
+  const mediaMl=totalVolMl-chosenAliquot;       // mL of media to add to stock
+  const concPerMl=actualCells/totalVolMl;        // cells/mL in working suspension
+  const cellsActualPerVessel=concPerMl*mediaVol; // cells per vessel with rounded volumes
+  const vesselsCanPlate=Math.floor((totalVolMl+0.001)/mediaVol); // +epsilon for float precision
+
+  // Stats
+  const statsEl=document.getElementById('seeding-stats');
+  statsEl.innerHTML=`
+    <div class="stat"><div class="sv">${(cellsPerVessel/1000).toFixed(0)}k</div><div class="sl">Target / vessel</div></div>
+    <div class="stat"><div class="sv">${(cellsPerCm2/1000).toFixed(1)}k</div><div class="sl">Cells / cm²</div></div>
+    <div class="stat"><div class="sv">${v.area} cm²</div><div class="sl">Vessel area</div></div>
+    <div class="stat"><div class="sv">${chosenAliquot} mL</div><div class="sl">Stock aliquot</div></div>
+    <div class="stat"><div class="sv">${totalVolMl.toFixed(1)} mL</div><div class="sl">Total vol</div></div>
+    <div class="stat"><div class="sv">${(cellsActualPerVessel/1000).toFixed(1)}k</div><div class="sl">Actual / vessel</div></div>`;
+
+  // Notices
+  const notEl=document.getElementById('seeding-notice');
+  let notices='';
+  const pctError=Math.abs(cellsActualPerVessel-cellsPerVessel)/cellsPerVessel*100;
+  if(pctError>5) notices+=`<div class="notice nw" style="margin-bottom:8px">⚠ Rounded volumes give ${pctError.toFixed(1)}% error vs target density. Try a different aliquot size.</div>`;
+  if(vesselsCanPlate<n) notices+=`<div class="notice nr" style="margin-bottom:8px">⚠ Total vol (${totalVolMl.toFixed(1)} mL) only sufficient for ${vesselsCanPlate} vessels at ${mediaVol} mL each. Increase aliquot or reduce vessels.</div>`;
+  notEl.innerHTML=notices;
+
+  // Protocol
+  const fmtK=c=>(c/1000).toFixed(1)+'k';
+  document.getElementById('seeding-protocol').innerHTML=`
+<b style="color:var(--text)">Workflow</b><br>
+1. Count cells → stock is <b style="color:var(--accent)">${(stock/1000).toFixed(0)}k cells/mL</b><br>
+2. Take <b style="color:var(--accent)">${chosenAliquot} mL</b> stock into tube<br>
+3. Add <b style="color:var(--accent)">${mediaMl.toFixed(1)} mL</b> complete media → total <b style="color:var(--accent)">${totalVolMl.toFixed(1)} mL</b><br>
+4. Mix well → working suspension = <b style="color:var(--accent)">${(concPerMl/1000).toFixed(1)}k cells/mL</b><br>
+5. Distribute <b style="color:var(--accent)">${mediaVol} mL</b> per ${v.name} → <b style="color:var(--accent)">${fmtK(cellsActualPerVessel)} cells/vessel</b> <span style="color:var(--muted)">(${(cellsActualPerVessel/v.area/1000).toFixed(1)}k cells/cm²)</span><br>
+6. Sufficient for <b style="color:var(--accent)">${vesselsCanPlate} ${v.name}${vesselsCanPlate!==1?'s':''}</b> (need ${n})${vesselsCanPlate>=n?' ✓':' ⚠'}`;
+}
+
+// ── Serial Dilutions ───────────────────────────────────────────────────────────
+function calcDilution(){
+  const start=parseFloat(document.getElementById('d-start-conc').value)||10000;
+  const unit=document.getElementById('d-unit').value;
+  const factor=parseFloat(document.getElementById('d-factor').value)||10;
+  const steps=parseInt(document.getElementById('d-steps').value)||6;
+  const vol=parseFloat(document.getElementById('d-vol').value)||200;
+  const reps=parseInt(document.getElementById('d-reps').value)||3;
+
+  const rows=[['Step','Concentration','Transfer Vol (µL)','Diluent Vol (µL)','Well Vol (µL)','Replicates']];
+  let conc=start;
+  let html=`<table class="dtbl"><thead><tr><th>Step</th><th>Conc (${unit})</th><th>Transfer (µL)</th><th>Diluent (µL)</th><th>Vol/well (µL)</th><th>Reps</th></tr></thead><tbody>`;
+  const transfer=vol/factor;
+  const diluent=vol-transfer;
+  for(let i=0;i<steps;i++){
+    const c=i===0?conc:conc/factor;
+    const dispC=c>=1?c.toFixed(2):c.toExponential(2);
+    html+=`<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="color:var(--accent);font-weight:600">${dispC} ${unit}</td>
+      <td>${i===0?'(stock)':transfer.toFixed(1)}</td>
+      <td>${i===0?(vol-transfer).toFixed(1):diluent.toFixed(1)}</td>
+      <td>${vol.toFixed(0)}</td>
+      <td>${reps}</td>
+    </tr>`;
+    conc=c;
+  }
+  html+='</tbody></table>';
+  document.getElementById('dilution-table').innerHTML=html;
+}
+
+// ── Transfection / Treatment ───────────────────────────────────────────────────
+const COLORS=['#58a6ff','#3fb950','#f0883e','#a371f7','#ffa657','#79c0ff','#56d364','#ff7b72','#d2a8ff','#e3b341','#39d353','#f85149'];
+function calcTransfection(){
+  const format=document.getElementById('t-plate').value;
+  const nCond=parseInt(document.getElementById('t-conditions').value)||4;
+  const reps=parseInt(document.getElementById('t-reps').value)||3;
+  const reagent=parseFloat(document.getElementById('t-reagent').value)||1.5;
+  const diluent=parseFloat(document.getElementById('t-diluent').value)||48.5;
+  const overage=parseFloat(document.getElementById('t-overage').value)||10;
+  const labelsRaw=document.getElementById('t-labels').value.trim().split('\n').map(s=>s.trim()).filter(s=>s);
+  const dims=PLATE_DIMS[format];
+  const totalWells=dims.r*dims.c;
+  const wellsNeeded=nCond*reps;
+  const mult=reps*(1+overage/100);
+  const reagentMM=reagent*mult, diluentMM=diluent*mult, totalMM=(reagent+diluent)*mult;
+
+  // Stats
+  const statsEl=document.getElementById('transfection-stats');
+  statsEl.innerHTML=`
+    <div class="stat"><div class="sv">${totalWells}</div><div class="sl">Plate wells</div></div>
+    <div class="stat"><div class="sv">${wellsNeeded}</div><div class="sl">Wells used</div></div>
+    <div class="stat"><div class="sv">${totalWells-wellsNeeded}</div><div class="sl">Wells spare</div></div>`;
+
+  if(wellsNeeded>totalWells){
+    document.getElementById('transfection-table').innerHTML=`<div class="notice" style="background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);color:var(--red)">⚠ ${wellsNeeded} wells needed but plate only has ${totalWells}. Reduce conditions or reps.</div>`;
+    return;
+  }
+
+  // Table
+  let html=`<table class="dtbl"><thead><tr><th>Condition</th><th>Reagent (µL)</th><th>Diluent (µL)</th><th>Total MM (µL)</th><th>Per Well (µL)</th></tr></thead><tbody>`;
+  for(let i=0;i<nCond;i++){
+    const lbl=labelsRaw[i]||`Condition ${i+1}`;
+    const col=COLORS[i%COLORS.length];
+    html+=`<tr>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};margin-right:5px"></span>${lbl}</td>
+      <td style="color:var(--accent)">${reagentMM.toFixed(1)}</td>
+      <td>${diluentMM.toFixed(1)}</td>
+      <td style="font-weight:600">${totalMM.toFixed(1)}</td>
+      <td>${(reagent+diluent).toFixed(1)}</td>
+    </tr>`;
+  }
+  html+='</tbody></table>';
+  document.getElementById('transfection-table').innerHTML=html;
+
+  // Plate layout visual
+  const wSize=dims.c<=6?32:24;
+  let plateHtml=`<div class="plate-vis" style="grid-template-columns:${wSize}px repeat(${dims.c},${wSize}px)">`;
+  plateHtml+=`<div></div>`;
+  for(let c=0;c<dims.c;c++) plateHtml+=`<div style="display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);height:${wSize}px">${c+1}</div>`;
+  const RNAMES='ABCDEFGH';
+  let wellIdx=0;
+  for(let r=0;r<dims.r;r++){
+    plateHtml+=`<div style="display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);width:${wSize}px">${RNAMES[r]||r+1}</div>`;
+    for(let c=0;c<dims.c;c++){
+      const condIdx=Math.floor(wellIdx/reps);
+      if(wellIdx<wellsNeeded&&condIdx<nCond){
+        const col=COLORS[condIdx%COLORS.length];
+        const lbl=labelsRaw[condIdx]?labelsRaw[condIdx].slice(0,2):`C${condIdx+1}`;
+        plateHtml+=`<div class="pwell" style="width:${wSize}px;height:${wSize}px;background:${col}22;border-color:${col}88;color:${col};font-size:${wSize>28?8:7}px" title="${labelsRaw[condIdx]||'C'+(condIdx+1)}">${lbl}</div>`;
+      } else {
+        plateHtml+=`<div class="pwell empty" style="width:${wSize}px;height:${wSize}px"></div>`;
+      }
+      wellIdx++;
+    }
+  }
+  plateHtml+='</div>';
+  document.getElementById('plate-layout').innerHTML=plateHtml;
+}
+
+// ── Export functions ──────────────────────────────────────────────
+function dlCSV(rows, filename){
+  var NL = String.fromCharCode(10);
+  var csv = rows.map(function(r){ return r.join(","); }).join(NL);
+  var blob = new Blob([csv], {type:"text/csv"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+}
+
+function dlText(content, filename){
+  var blob = new Blob([content], {type:"text/plain"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+}
+
+function exportSeeding(){
+  var statEls = Array.from(document.querySelectorAll("#seeding-stats .sv")).map(function(e){ return e.textContent; });
+  if(statEls.length === 0){ alert("Run calculation first."); return; }
+
+  var v       = VESSELS[document.getElementById("s-vessel").value];
+  var n       = parseInt(document.getElementById("s-n-vessels").value) || 1;
+  var density = parseFloat(document.getElementById("s-density").value) || 50000;
+  var stock   = parseFloat(document.getElementById("s-stock-count").value) || 500000;
+  var mediaVol= parseFloat(document.getElementById("s-media-vol").value) || 0.5;
+  var overage = parseFloat(document.getElementById("s-overage").value) || 10;
+  var statLbls= Array.from(document.querySelectorAll("#seeding-stats .sl")).map(function(e){ return e.textContent; });
+
+  var NL = String.fromCharCode(10);
+  var protocolEl = document.getElementById("seeding-protocol");
+  var steps = protocolEl
+    ? protocolEl.innerText.split(NL).map(function(l){ return l.trim(); }).filter(function(l){ return l && l !== "Workflow"; })
+    : [];
+
+  var dateStr = new Date().toLocaleDateString("en-AU", {day:"2-digit", month:"short", year:"numeric"});
+
+  var md = "";
+  md += "# Cell Seeding Protocol" + NL;
+  md += "_Generated: " + dateStr + " | Sarah Hancock's Lab Tools_" + NL + NL;
+  md += "---" + NL + NL;
+
+  md += "## Parameters" + NL + NL;
+  md += "| Parameter | Value |" + NL;
+  md += "|---|---|" + NL;
+  md += "| Vessel type | " + v.name + " |" + NL;
+  md += "| Vessel area | " + v.area + " cm² |" + NL;
+  md += "| Number of vessels | " + n + " |" + NL;
+  md += "| Target cells / vessel | " + Number(density).toLocaleString() + " |" + NL;
+  md += "| Cells / cm² | " + (density / v.area).toFixed(0) + " |" + NL;
+  md += "| Stock concentration | " + Number(stock).toLocaleString() + " cells/mL |" + NL;
+  md += "| Media per vessel | " + mediaVol + " mL |" + NL;
+  md += "| Overage | " + overage + "% |" + NL;
+  md += NL;
+
+  md += "## Results" + NL + NL;
+  md += "| | |" + NL;
+  md += "|---|---|" + NL;
+  statLbls.forEach(function(lbl, i){
+    md += "| " + lbl + " | **" + (statEls[i] || "") + "** |" + NL;
+  });
+  md += NL;
+
+  md += "## Protocol" + NL + NL;
+  steps.forEach(function(line, i){
+    md += (i + 1) + ". " + line + NL;
+  });
+  md += NL;
+  md += "---" + NL;
+  md += "_Copy this into LabArchives or any markdown-compatible notebook._" + NL;
+
+  dlText(md, "seeding_protocol.md");
+}
+
+function exportDilution(){
+  var tbl = document.querySelector("#dilution-table table");
+  if(!tbl){ alert("No dilution table to export."); return; }
+  var rows = [];
+  tbl.querySelectorAll("tr").forEach(function(tr){
+    rows.push(Array.from(tr.querySelectorAll("th,td")).map(function(c){ return c.innerText.trim(); }));
+  });
+  dlCSV(rows, "serial_dilution.csv");
+}
+
+function exportTransfection(){
+  var tbl = document.querySelector("#transfection-table table");
+  if(!tbl){ alert("No transfection table to export."); return; }
+  var rows = [];
+  tbl.querySelectorAll("tr").forEach(function(tr){
+    rows.push(Array.from(tr.querySelectorAll("th,td")).map(function(c){ return c.innerText.trim(); }));
+  });
+  var plate = document.getElementById("t-plate").value + "-well";
+  var conds = document.getElementById("t-conditions").value;
+  var reps  = document.getElementById("t-reps").value;
+  rows.push([]);
+  rows.push(["Plate", plate]);
+  rows.push(["Conditions", conds]);
+  rows.push(["Replicates per condition", reps]);
+  dlCSV(rows, "transfection_layout.csv");
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+calcSeeding(); calcDilution(); calcTransfection();
+</script>
+</body>
+</html>

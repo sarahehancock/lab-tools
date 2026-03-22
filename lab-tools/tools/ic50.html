@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IC50 Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--orange:#f0883e;--red:#f85149;--purple:#a371f7;
+  --muted:#8b949e;--text:#e6edf3;--text2:#c9d1d9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent);font-size:13px}
+.badge{background:rgba(163,113,247,.15);color:var(--purple);border:1px solid rgba(163,113,247,.3);padding:2px 8px;border-radius:12px;font-size:10px;font-family:'IBM Plex Mono',monospace}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:260px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
+.main{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.ch{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px;border-radius:8px 8px 0 0;flex-wrap:wrap}
+.cb{padding:12px}
+label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+.f{margin-bottom:10px}.f:last-child{margin-bottom:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--accent);color:#0d1117}.btn-p:hover{background:#79c0ff}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.btn-w{background:rgba(240,136,62,.15);color:var(--orange);border:1px solid rgba(240,136,62,.3)}.btn-w:hover{background:rgba(240,136,62,.25)}
+.btn-d{background:rgba(248,81,73,.1);color:var(--red);border:1px solid rgba(248,81,73,.25)}.btn-d:hover{background:rgba(248,81,73,.2)}
+.sep{height:1px;background:var(--border);margin:8px 0}
+.flex{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+.notice{padding:8px 12px;border-radius:6px;font-size:11px;margin-bottom:6px;line-height:1.6}
+.ni{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--accent)}
+.nw{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange)}
+.ns{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+.nr{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);color:var(--red)}
+
+/* Plate cards */
+.pl-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px}
+.pl-card:last-child{margin-bottom:0}
+.pl-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.pl-name{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;color:var(--text)}
+.pl-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-weight:600}
+.dir-ok{background:rgba(63,185,80,.12);color:var(--green)}
+.dir-warn{background:rgba(240,136,62,.15);color:var(--orange)}
+.dir-err{background:rgba(248,81,73,.1);color:var(--red)}
+.pl-half{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}
+.pl-half:last-child{margin-bottom:0}
+.half-lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);width:32px;flex-shrink:0}
+.half-dir{font-size:9px;padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;flex-shrink:0}
+.dir-right{background:rgba(88,166,255,.12);color:var(--accent)}
+.dir-left{background:rgba(63,185,80,.12);color:var(--green)}
+.dir-manual{background:rgba(240,136,62,.15);color:var(--orange)}
+
+/* IC50 results */
+.ic50-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.ic50-box{border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:var(--surface2)}
+.ic50-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:6px}
+.ic50-val{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-bottom:2px}
+.ic50-ci{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:8px}
+.ic50-params{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:8px}
+.ftest-box{border:1px solid var(--border);border-radius:8px;padding:12px 16px;background:var(--surface2)}
+.ftest-verdict{font-size:13px;font-weight:600;margin-bottom:6px}
+.ftest-stats{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8}
+table.dt{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:10px}
+table.dt th{background:var(--surface2);color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+table.dt td{padding:4px 8px;border-bottom:1px solid rgba(48,54,61,.35)}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(255,255,255,.015)}
+
+/* Direction resolve modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:420px;width:90%}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:8px}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.modal .row{display:flex;gap:8px;flex-wrap:wrap}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+canvas{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⬡ LAB·TOOLS</div>
+  <div class="badge">IC50 Calculator</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-s" onclick="exportMD()">⬇ Export MD</button>
+</header>
+
+<div class="layout">
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+
+  <div class="card">
+    <div class="ch">⚙ Experiment</div>
+    <div class="cb">
+      <div class="f">
+        <label>Drug / Compound</label>
+        <input type="text" id="drug-name" value="GSK">
+      </div>
+      <div class="f">
+        <label>Concentration unit</label>
+        <select id="conc-unit">
+          <option value="nM">nM</option>
+          <option value="µM" selected>µM</option>
+          <option value="mM">mM</option>
+          <option value="µg/mL">µg/mL</option>
+        </select>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Drug Concentrations</label>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">7 doses (no vehicle), <b style="color:var(--text2)">high → low</b>, one per line</div>
+        <textarea id="doses-input" rows="7" style="font-size:11px">10000
+3333
+1111
+370
+123
+41
+14</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">⚗ Fitting Options</div>
+    <div class="cb">
+      <div class="f">
+        <label>Aggregation</label>
+        <select id="agg-method">
+          <option value="mean-first">Mean tech reps per plate, then fit</option>
+          <option value="all-points">Fit all individual points</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>Hill slope</label>
+        <select id="hill-con">
+          <option value="free">Free (variable)</option>
+          <option value="1">Fixed = 1</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>Top (max response)</label>
+        <select id="top-con">
+          <option value="free">Free</option>
+          <option value="100">Fixed = 100%</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>Bottom (min response)</label>
+        <select id="bot-con">
+          <option value="free">Free</option>
+          <option value="0">Fixed = 0%</option>
+        </select>
+      </div>
+      <div class="sep"></div>
+      <div class="f" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="show-ci" checked style="width:auto;cursor:pointer;accent-color:var(--accent)">
+        <label for="show-ci" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text2)">Show 95% CI band on curves</label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- Add plate -->
+  <div class="card">
+    <div class="ch">📋 Plates
+      <span style="flex:1"></span>
+      <span id="plate-count-lbl" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="cb">
+      <div id="plates-list">
+        <div class="notice ni">No plates loaded yet — paste a plate below and click Add.</div>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Paste plate data</label>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Paste the full plate reader export (same format as BCA tool). Rows B–G and cols 2–9 are extracted automatically. Vehicle end detected from the data.</div>
+        <textarea id="plate-paste" rows="6" style="font-size:11px" placeholder="Paste plate reader export here..."></textarea>
+      </div>
+      <div class="row2 f">
+        <div>
+          <label>Top half label</label>
+          <input type="text" id="add-label-top" placeholder="e.g. P34 or HeLa">
+        </div>
+        <div>
+          <label>Bottom half label</label>
+          <input type="text" id="add-label-bot" placeholder="e.g. C64 or MCF7">
+        </div>
+      </div>
+      <div class="flex">
+        <button class="btn btn-p grow" onclick="addPlate()">+ Add Plate</button>
+        <button class="btn btn-s" onclick="runAnalysis()">▶ Analyse</button>
+        <button class="btn btn-d" onclick="clearAll()">✕ Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section" style="display:none">
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <div class="ch">📊 IC50 Results
+          <span style="flex:1"></span>
+          <span id="group-summary-lbl" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)"></span>
+        </div>
+        <div class="cb">
+          <div class="ic50-grid" id="ic50-grid"></div>
+          <div id="notices-area"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch">🔬 One Curve vs Two Curves (F-test)</div>
+        <div class="cb" id="ftest-area"></div>
+      </div>
+
+      <!-- Side-by-side individual curves -->
+      <div style="display:flex;gap:16px;flex-wrap:wrap" id="charts-sidebyside"></div>
+
+      <!-- Big overlay plot below -->
+      <div class="card">
+        <div class="ch">Overlay — all groups
+          <span style="flex:1"></span>
+          <button class="btn btn-s" style="font-size:11px;padding:3px 9px" onclick="exportOverlayPNG()">⬇ PNG</button>
+          <button class="btn btn-s" style="font-size:11px;padding:3px 9px" onclick="exportOverlaySVG()">⬇ SVG</button>
+        </div>
+        <div class="cb" style="padding:8px"><canvas id="chart-overlay" height="380"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="ch">🔢 Normalised Data</div>
+        <div class="cb" style="padding:0;overflow-x:auto">
+          <table class="dt"><thead><tr id="dt-head"></tr></thead><tbody id="dt-body"></tbody></table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Direction resolve modal -->
+<div id="modal-bg" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">Ambiguous plate direction</h3>
+    <p id="modal-body"></p>
+    <div class="row" id="modal-buttons"></div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+var plates = [];       // [{id, name, labelTop, labelBot, top:[[8]x3], bot:[[8]x3], dirTop, dirBot}]
+var plateCounter = 0;
+var pendingPlate = null;  // plate waiting for direction confirmation
+var lastResults = null;
+var AMBIG_RATIO = 1.4;  // ratio below which we consider direction ambiguous
+
+// ── Parse raw plate export ─────────────────────────────────────────────────────
+function parsePlateRaw(raw) {
+  var lines = raw.split("\n").map(function(l){return l.trim();}).filter(function(l){return l;});
+  var numRows = [];
+  lines.forEach(function(line){
+    var parts = line.split(/\t|,/).map(function(p){return p.trim();});
+    var nums = [];
+    parts.forEach(function(p){ var v=parseFloat(p); if(!isNaN(v)&&p!=="") nums.push(v); });
+    if(nums.length >= 8) numRows.push(nums.slice(0,12));
+  });
+  if(numRows.length < 6) return null;
+  var rows = numRows.slice(-6);
+  function extract(row){ var v=[]; for(var j=0;j<8;j++) v.push((row[j]===undefined||isNaN(row[j]))?null:row[j]); return v; }
+  return {
+    top: [extract(rows[0]), extract(rows[1]), extract(rows[2])],
+    bot: [extract(rows[3]), extract(rows[4]), extract(rows[5])]
+  };
+}
+
+// ── Detect vehicle direction for one half ─────────────────────────────────────
+// Returns {dir:'right'|'left', ratio, confident}
+// 'right' = vehicle is col 9 (index 7), doses go high→low left to right
+// 'left'  = vehicle is col 2 (index 0), doses go low→high left to right
+function detectDir(rows) {
+  var leftVals=[], rightVals=[];
+  rows.forEach(function(row){
+    if(row[0]!==null) leftVals.push(row[0]);
+    if(row[1]!==null) leftVals.push(row[1]);
+    if(row[6]!==null) rightVals.push(row[6]);
+    if(row[7]!==null) rightVals.push(row[7]);
+  });
+  if(!leftVals.length||!rightVals.length) return {dir:'right',ratio:1,confident:false};
+  var leftMean  = leftVals.reduce(function(a,b){return a+b;},0)/leftVals.length;
+  var rightMean = rightVals.reduce(function(a,b){return a+b;},0)/rightVals.length;
+  var ratio = Math.max(leftMean,rightMean)/Math.min(leftMean,rightMean);
+  var dir = rightMean > leftMean ? 'right' : 'left';
+  return {dir:dir, ratio:ratio, confident:ratio>=AMBIG_RATIO, leftMean:leftMean, rightMean:rightMean};
+}
+
+// ── Add plate ──────────────────────────────────────────────────────────────────
+function addPlate() {
+  var raw  = document.getElementById("plate-paste").value.trim();
+  var lblT = document.getElementById("add-label-top").value.trim();
+  var lblB = document.getElementById("add-label-bot").value.trim();
+  if(!raw){ alert("Paste plate data first."); return; }
+  if(!lblT||!lblB){ alert("Enter labels for both the top and bottom halves."); return; }
+  var parsed = parsePlateRaw(raw);
+  if(!parsed){ alert("Could not parse plate data.\n\nNeed 6 rows of at least 8 numeric values (rows B–G, cols 2–9).\nPaste the full plate reader export."); return; }
+
+  var dirTop = detectDir(parsed.top);
+  var dirBot = detectDir(parsed.bot);
+
+  plateCounter++;
+  var plate = {
+    id:plateCounter, name:"Plate "+plateCounter,
+    labelTop:lblT, labelBot:lblB,
+    top:parsed.top, bot:parsed.bot,
+    dirTop:dirTop.dir, dirBot:dirBot.dir,
+    ratioTop:dirTop.ratio, ratioBot:dirBot.ratio
+  };
+
+  // Check if either direction is ambiguous
+  var ambigHalves = [];
+  if(!dirTop.confident) ambigHalves.push({which:'top', label:lblT, det:dirTop});
+  if(!dirBot.confident) ambigHalves.push({which:'bot', label:lblB, det:dirBot});
+
+  if(ambigHalves.length > 0) {
+    pendingPlate = {plate:plate, ambig:ambigHalves, idx:0};
+    document.getElementById("plate-paste").value = "";
+    document.getElementById("add-label-top").value = "";
+    document.getElementById("add-label-bot").value = "";
+    showDirectionModal();
+  } else {
+    commitPlate(plate);
+    document.getElementById("plate-paste").value = "";
+    document.getElementById("add-label-top").value = "";
+    document.getElementById("add-label-bot").value = "";
+  }
+}
+
+function commitPlate(plate) {
+  plates.push(plate);
+  renderPlates();
+}
+
+// ── Direction modal ────────────────────────────────────────────────────────────
+function showDirectionModal() {
+  var pp = pendingPlate;
+  var amb = pp.ambig[pp.idx];
+  var det = amb.det;
+  var whichHalf = amb.which==="top" ? "top half (rows B–D)" : "bottom half (rows E–G)";
+  var plate = pp.plate;
+
+  document.getElementById("modal-title").textContent =
+    "Ambiguous direction — " + plate.name + " " + whichHalf;
+  document.getElementById("modal-body").innerHTML =
+    "Could not confidently determine which end is the vehicle for <b>" + amb.label + "</b> (" + whichHalf + ").<br><br>"
+    + "Left end mean: <b>" + det.leftMean.toFixed(3) + "</b> &nbsp;|&nbsp; Right end mean: <b>" + det.rightMean.toFixed(3) + "</b> &nbsp;|&nbsp; Ratio: <b>" + det.ratio.toFixed(2) + "</b><br><br>"
+    + "Which column is the <b>vehicle (no drug)</b> control?";
+
+  var btns = document.getElementById("modal-buttons");
+  btns.innerHTML = "";
+
+  var b1 = document.createElement("button");
+  b1.className = "btn btn-s grow";
+  b1.textContent = "Col 9 (right) = vehicle → doses high→low";
+  b1.onclick = function(){ resolveDir(amb.which, 'right'); };
+  btns.appendChild(b1);
+
+  var b2 = document.createElement("button");
+  b2.className = "btn btn-s grow";
+  b2.textContent = "Col 2 (left) = vehicle → doses low→high";
+  b2.onclick = function(){ resolveDir(amb.which, 'left'); };
+  btns.appendChild(b2);
+
+  document.getElementById("modal-bg").style.display = "flex";
+}
+
+function resolveDir(which, dir) {
+  var pp = pendingPlate;
+  if(which==="top") pp.plate.dirTop=dir;
+  else              pp.plate.dirBot=dir;
+
+  pp.idx++;
+  if(pp.idx < pp.ambig.length) {
+    showDirectionModal();
+  } else {
+    document.getElementById("modal-bg").style.display = "none";
+    commitPlate(pp.plate);
+    pendingPlate = null;
+  }
+}
+
+// ── Render plate list ──────────────────────────────────────────────────────────
+function removePlate(id) {
+  plates = plates.filter(function(p){ return p.id!==id; });
+  renderPlates();
+}
+
+function clearAll() {
+  plates=[]; plateCounter=0; lastResults=null;
+  renderPlates();
+  document.getElementById("results-section").style.display = "none";
+}
+
+function renderPlates() {
+  var el = document.getElementById("plates-list");
+  document.getElementById("plate-count-lbl").textContent = plates.length
+    ? plates.length+" plate"+(plates.length!==1?"s":"")+" loaded"
+    : "";
+  if(!plates.length){
+    el.innerHTML='<div class="notice ni">No plates loaded yet — paste a plate below and click Add.</div>';
+    return;
+  }
+  var h = "";
+  plates.forEach(function(p){
+    var topDirBadge = p.ratioTop>=AMBIG_RATIO
+      ? '<span class="pl-badge dir-ok">auto ✓</span>'
+      : '<span class="pl-badge dir-warn">manual</span>';
+    var botDirBadge = p.ratioBot>=AMBIG_RATIO
+      ? '<span class="pl-badge dir-ok">auto ✓</span>'
+      : '<span class="pl-badge dir-warn">manual</span>';
+    var topDirStr = p.dirTop==='right'
+      ? '<span class="half-dir dir-right">col9=veh high→low</span>'
+      : '<span class="half-dir dir-left">col2=veh low→high</span>';
+    var botDirStr = p.dirBot==='right'
+      ? '<span class="half-dir dir-right">col9=veh high→low</span>'
+      : '<span class="half-dir dir-left">col2=veh low→high</span>';
+    h += '<div class="pl-card">';
+    h += '<div class="pl-head"><span class="pl-name">'+p.name+'</span>';
+    h += '<button onclick="removePlate('+p.id+')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button></div>';
+    h += '<div class="pl-half"><span class="half-lbl">Top:</span><b style="color:#58a6ff;font-size:11px">'+p.labelTop+'</b>'+topDirStr+topDirBadge+'</div>';
+    h += '<div class="pl-half"><span class="half-lbl">Bot:</span><b style="color:#3fb950;font-size:11px">'+p.labelBot+'</b>'+botDirStr+botDirBadge+'</div>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+
+// ── Normalise one half ─────────────────────────────────────────────────────────
+// dir: 'right' = col9 is vehicle (index 7), drug vals = indices 0..6 in high→low order
+//      'left'  = col2 is vehicle (index 0), drug vals = indices 1..7, reversed to high→low
+function normaliseHalf(rows, dir, doses, plateId, label) {
+  var pts = [], vehPts = [];
+  rows.forEach(function(row, tri){
+    var veh, drugVals;
+    if(dir==='right'){ veh=row[7]; drugVals=row.slice(0,7); }
+    else             { veh=row[0]; drugVals=row.slice(1,8).reverse(); }
+    if(!veh||veh===0) return;
+    // Vehicle point (always 100% by definition)
+    vehPts.push({plateId:plateId, label:label, techRep:tri, dose:0, pct:100});
+    drugVals.forEach(function(v,di){
+      if(v!==null && doses[di]!==undefined)
+        pts.push({plateId:plateId, label:label, techRep:tri, dose:doses[di], pct:(v/veh)*100});
+    });
+  });
+  return {pts:pts, vehPts:vehPts};
+}
+
+// ── Get doses ──────────────────────────────────────────────────────────────────
+function getDoses() {
+  var raw = document.getElementById("doses-input").value.trim();
+  return raw.split(/[\n,]+/).map(function(s){ return parseFloat(s.trim()); }).filter(function(v){ return !isNaN(v); });
+}
+
+// ── 4PL Levenberg-Marquardt ────────────────────────────────────────────────────
+function fit4PL(xs, ys, opts) {
+  opts = opts||{};
+  var n=xs.length;
+  if(n<4) return null;
+  var fixBot=opts.fixBot!==undefined?opts.fixBot:null;
+  var fixTop=opts.fixTop!==undefined?opts.fixTop:null;
+  var fixHill=opts.fixHill!==undefined?opts.fixHill:null;
+  var yMax=Math.max.apply(null,ys), yMin=Math.min.apply(null,ys);
+  var sorted=xs.slice().sort(function(a,b){return a-b;});
+  var xMid=sorted[Math.floor(sorted.length/2)]||1;
+  var p=[fixBot!==null?fixBot:yMin, fixTop!==null?fixTop:yMax, Math.log10(xMid), fixHill!==null?fixHill:1.2];
+  var fixed=[fixBot!==null,fixTop!==null,false,fixHill!==null];
+  var fi=[]; for(var i=0;i<4;i++) if(!fixed[i]) fi.push(i);
+  var nf=fi.length; if(nf===0) return null;
+  function pred(p,x){ return p[0]+(p[1]-p[0])/(1+Math.pow(10,p[3]*(p[2]-Math.log10(Math.max(x,1e-30))))); }
+  function ssr(p){ var s=0; for(var i=0;i<n;i++) s+=Math.pow(ys[i]-pred(p,xs[i]),2); return s; }
+  var lam=0.01, prev=ssr(p), eps=1e-7;
+  for(var iter=0;iter<1000;iter++){
+    var J=[],res=[];
+    for(var i=0;i<n;i++){
+      var row=[]; fi.forEach(function(pi){var pp=p.slice();pp[pi]+=eps;row.push((pred(pp,xs[i])-pred(p,xs[i]))/eps);}); J.push(row); res.push(ys[i]-pred(p,xs[i]));
+    }
+    var JtJ=[],Jtr=[];
+    for(var a=0;a<nf;a++){JtJ.push([]);for(var b=0;b<nf;b++){var s=0;for(var i=0;i<n;i++) s+=J[i][a]*J[i][b];JtJ[a].push(s);}var s=0;for(var i=0;i<n;i++) s+=J[i][a]*res[i];Jtr.push(s);}
+    for(var a=0;a<nf;a++) JtJ[a][a]*=(1+lam);
+    var M=JtJ.map(function(r,i){return r.concat([Jtr[i]]);});
+    for(var pp=0;pp<nf;pp++){var mx=pp;for(var r=pp+1;r<nf;r++) if(Math.abs(M[r][pp])>Math.abs(M[mx][pp])) mx=r;var tmp=M[pp];M[pp]=M[mx];M[mx]=tmp;for(var r=pp+1;r<nf;r++){var f=M[r][pp]/M[pp][pp];for(var c=pp;c<=nf;c++) M[r][c]-=f*M[pp][c];}}
+    var delta=new Array(nf).fill(0);
+    for(var i=nf-1;i>=0;i--){delta[i]=M[i][nf];for(var j=i+1;j<nf;j++) delta[i]-=M[i][j]*delta[j];delta[i]/=M[i][i];}
+    var pN=p.slice(); fi.forEach(function(pi,ii){pN[pi]+=delta[ii];}); pN[3]=Math.max(0.1,pN[3]);
+    var ns=ssr(pN);
+    if(ns<prev){p=pN;prev=ns;lam*=0.3;}else{lam*=3;}
+    if(lam>1e12) break;
+    if(delta.every(function(d){return Math.abs(d)<1e-10;})) break;
+  }
+  var ic50=Math.pow(10,p[2]);
+  var ybar=ys.reduce(function(a,b){return a+b;},0)/n;
+  var ssTot=ys.reduce(function(s,y){return s+Math.pow(y-ybar,2);},0);
+  var r2=ssTot>0?1-prev/ssTot:0;
+  // Bootstrap CI
+  var boots=[];
+  for(var b=0;b<600;b++){
+    var bx=[],by=[]; for(var i=0;i<n;i++){var idx=Math.floor(Math.random()*n);bx.push(xs[idx]);by.push(ys[idx]);}
+    var bf=fit4PLboot(bx,by,p,fi,nf); if(bf!==null&&isFinite(bf)&&bf>0) boots.push(bf);
+  }
+  boots.sort(function(a,b){return a-b;});
+  var ciLo=boots.length>20?boots[Math.floor(boots.length*0.025)]:ic50*0.3;
+  var ciHi=boots.length>20?boots[Math.floor(boots.length*0.975)]:ic50*3;
+  return {bottom:p[0],top:p[1],ic50:ic50,logIC50:p[2],hill:p[3],r2:r2,ssr:prev,n:n,ciLo:ciLo,ciHi:ciHi};
+}
+function fit4PLboot(xs,ys,p0,fi,nf){
+  var p=p0.slice(),n=xs.length;
+  function pred(p,x){return p[0]+(p[1]-p[0])/(1+Math.pow(10,p[3]*(p[2]-Math.log10(Math.max(x,1e-30)))));}
+  function ssr(p){var s=0;for(var i=0;i<n;i++) s+=Math.pow(ys[i]-pred(p,xs[i]),2);return s;}
+  var lam=0.1,prev=ssr(p),eps=1e-6;
+  for(var iter=0;iter<200;iter++){
+    var J=[],res=[];
+    for(var i=0;i<n;i++){var row=[];fi.forEach(function(pi){var pp=p.slice();pp[pi]+=eps;row.push((pred(pp,xs[i])-pred(p,xs[i]))/eps);});J.push(row);res.push(ys[i]-pred(p,xs[i]));}
+    var JtJ=[],Jtr=[];
+    for(var a=0;a<nf;a++){JtJ.push([]);for(var b=0;b<nf;b++){var s=0;for(var i=0;i<n;i++) s+=J[i][a]*J[i][b];JtJ[a].push(s);}var s=0;for(var i=0;i<n;i++) s+=J[i][a]*res[i];Jtr.push(s);}
+    for(var a=0;a<nf;a++) JtJ[a][a]*=(1+lam);
+    var M=JtJ.map(function(r,i){return r.concat([Jtr[i]]);});
+    for(var pp=0;pp<nf;pp++){var mx=pp;for(var r=pp+1;r<nf;r++) if(Math.abs(M[r][pp])>Math.abs(M[mx][pp])) mx=r;var tmp=M[pp];M[pp]=M[mx];M[mx]=tmp;for(var r=pp+1;r<nf;r++){var f=M[r][pp]/M[pp][pp];for(var c=pp;c<=nf;c++) M[r][c]-=f*M[pp][c];}}
+    var delta=new Array(nf).fill(0);
+    for(var i=nf-1;i>=0;i--){delta[i]=M[i][nf];for(var j=i+1;j<nf;j++) delta[i]-=M[i][j]*delta[j];delta[i]/=M[i][i];}
+    var pN=p.slice();fi.forEach(function(pi,ii){pN[pi]+=delta[ii];});pN[3]=Math.max(0.1,pN[3]);
+    var ns=ssr(pN);if(ns<prev){p=pN;prev=ns;lam*=0.3;}else{lam*=3;}
+    if(lam>1e8) break;
+  }
+  return Math.pow(10,p[2]);
+}
+
+// ── F-test ─────────────────────────────────────────────────────────────────────
+function fTest(fitShared,fitA,fitB){
+  var dfNum=4, dfDen=(fitA.n+fitB.n)-8;
+  if(dfDen<=0||fitA.ssr+fitB.ssr<=0) return null;
+  var F=((fitShared.ssr-fitA.ssr-fitB.ssr)/dfNum)/((fitA.ssr+fitB.ssr)/dfDen);
+  if(F<0) F=0;
+  return {F:F,dfNum:dfNum,dfDen:dfDen,p:fDistP(F,dfNum,dfDen),ss_shared:fitShared.ssr,ss_sep:fitA.ssr+fitB.ssr};
+}
+function fDistP(F,d1,d2){var x=d2/(d2+d1*F);return incompleteBeta(x,d2/2,d1/2);}
+function incompleteBeta(x,a,b){
+  if(x<=0) return 0; if(x>=1) return 1;
+  if(x>(a+1)/(a+b+2)) return 1-incompleteBeta(1-x,b,a);
+  var lbeta=lgamma(a+b)-lgamma(a)-lgamma(b);
+  var front=Math.exp(lbeta+a*Math.log(x)+b*Math.log(1-x))/a;
+  var c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<1e-30)d=1e-30;d=1/d;var h=d;
+  for(var m=1;m<=200;m++){
+    var m2=2*m,aa=m*(b-m)*x/((a+m2-1)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;h*=d*c;
+    aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+m2+1));
+    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;var del=d*c;h*=del;
+    if(Math.abs(del-1)<1e-12) break;
+  }
+  return front*h;
+}
+function lgamma(x){
+  var c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5) return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;var a=c[0],t=x+7.5;for(var i=1;i<9;i++) a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+
+// ── Run analysis ───────────────────────────────────────────────────────────────
+function runAnalysis(){
+  if(!plates.length){alert("Load at least one plate first.");return;}
+  var doses=getDoses();
+  if(doses.length!==7){alert("Enter exactly 7 drug concentrations (excluding vehicle).");return;}
+  var fixTop=document.getElementById("top-con").value==="100"?100:null;
+  var fixBot=document.getElementById("bot-con").value==="0"?0:null;
+  var fixHill=document.getElementById("hill-con").value==="1"?1:null;
+  var aggMethod=document.getElementById("agg-method").value;
+  var opts={fixTop:fixTop,fixBot:fixBot,fixHill:fixHill};
+
+  // Collect all normalised points, grouped by label
+  var allPts={}, vehPts={};  // label → [{plateId,label,dose,pct}]
+  plates.forEach(function(p){
+    var rTop=normaliseHalf(p.top,p.dirTop,doses,p.id,p.labelTop);
+    rTop.pts.forEach(function(pt){ if(!allPts[pt.label]) allPts[pt.label]=[]; allPts[pt.label].push(pt); });
+    rTop.vehPts.forEach(function(pt){ if(!vehPts[pt.label]) vehPts[pt.label]=[]; vehPts[pt.label].push(pt); });
+    var rBot=normaliseHalf(p.bot,p.dirBot,doses,p.id,p.labelBot);
+    rBot.pts.forEach(function(pt){ if(!allPts[pt.label]) allPts[pt.label]=[]; allPts[pt.label].push(pt); });
+    rBot.vehPts.forEach(function(pt){ if(!vehPts[pt.label]) vehPts[pt.label]=[]; vehPts[pt.label].push(pt); });
+  });
+
+  var groupLabels=Object.keys(allPts).sort();
+  if(groupLabels.length<1){alert("No normalised data found.");return;}
+
+  function toFitData(pts){
+    if(aggMethod==="mean-first"){
+      var byPlateDose={};
+      pts.forEach(function(pt){
+        var k=pt.plateId+"|"+pt.dose;
+        if(!byPlateDose[k]) byPlateDose[k]={dose:pt.dose,vals:[]};
+        byPlateDose[k].vals.push(pt.pct);
+      });
+      var xs=[],ys=[];
+      Object.values(byPlateDose).forEach(function(g){
+        var mean=g.vals.reduce(function(a,b){return a+b;},0)/g.vals.length;
+        xs.push(g.dose);ys.push(mean);
+      });
+      return {xs:xs,ys:ys};
+    } else {
+      return {xs:pts.map(function(p){return p.dose;}),ys:pts.map(function(p){return p.pct;})};
+    }
+  }
+
+  var fits={}, fdMap={};
+  groupLabels.forEach(function(lbl){
+    fdMap[lbl]=toFitData(allPts[lbl]);
+    fits[lbl]=fit4PL(fdMap[lbl].xs,fdMap[lbl].ys,opts);
+  });
+
+  // Shared fit (all data combined)
+  var allXs=[],allYs=[];
+  groupLabels.forEach(function(lbl){allXs=allXs.concat(fdMap[lbl].xs);allYs=allYs.concat(fdMap[lbl].ys);});
+  var fitShared=fit4PL(allXs,allYs,opts);
+
+  // F-test only makes sense for exactly 2 groups
+  var ftest=null;
+  if(groupLabels.length===2){
+    ftest=fTest(fitShared,fits[groupLabels[0]],fits[groupLabels[1]]);
+  }
+
+  var COLORS={"0":"#58a6ff","1":"#3fb950","2":"#f0883e","3":"#a371f7","4":"#ffa657"};
+  var colorMap={};
+  groupLabels.forEach(function(lbl,i){colorMap[lbl]=COLORS[String(i%5)];});
+
+  lastResults={fits:fits,fitShared:fitShared,fdMap:fdMap,allPts:allPts,vehPts:vehPts,ftest:ftest,
+    groupLabels:groupLabels,colorMap:colorMap,doses:doses,
+    unit:document.getElementById("conc-unit").value,
+    drug:document.getElementById("drug-name").value};
+
+  renderResults(lastResults);
+}
+
+// ── Format helpers ─────────────────────────────────────────────────────────────
+function fmtIC50(v,unit){
+  if(!v||isNaN(v)||!isFinite(v)||v<=0) return "N/D";
+  if(v>=1000) return (v/1000).toFixed(2)+" m"+unit;
+  if(v>=1)    return v.toFixed(2)+" "+unit;
+  return (v*1000).toFixed(2)+" n"+(unit==="µM"?"M":unit);
+}
+function fmtP(p){if(isNaN(p)||!isFinite(p)) return "N/D";if(p<0.0001) return "< 0.0001";return p.toFixed(4);}
+
+// ── Render results ─────────────────────────────────────────────────────────────
+function renderResults(res){
+  document.getElementById("results-section").style.display="block";
+  document.getElementById("group-summary-lbl").textContent=
+    res.groupLabels.length+" group"+(res.groupLabels.length!==1?"s":"")+" — "+res.groupLabels.join(", ");
+
+  // IC50 cards
+  var gridCols=Math.min(res.groupLabels.length,3);
+  var grid=document.getElementById("ic50-grid");
+  grid.style.gridTemplateColumns=Array(gridCols).fill("1fr").join(" ");
+  grid.innerHTML=res.groupLabels.map(function(lbl){
+    var fit=res.fits[lbl],col=res.colorMap[lbl];
+    if(!fit) return '<div class="ic50-box"><div class="ic50-lbl" style="color:'+col+'">'+res.drug+' — '+lbl+' (no fit)</div></div>';
+    return '<div class="ic50-box" style="border-color:'+col+'55">'
+      +'<div class="ic50-lbl" style="color:'+col+'">'+res.drug+' — '+lbl+'</div>'
+      +'<div class="ic50-val" style="color:'+col+'">'+fmtIC50(fit.ic50,res.unit)+'</div>'
+      +'<div class="ic50-ci">95% CI: '+fmtIC50(fit.ciLo,res.unit)+' – '+fmtIC50(fit.ciHi,res.unit)+'</div>'
+      +'<div class="ic50-params">Top: '+fit.top.toFixed(1)+'% | Bottom: '+fit.bottom.toFixed(1)+'%<br>'
+      +'Hill: '+fit.hill.toFixed(3)+' | R²: '+fit.r2.toFixed(4)+' | n='+fit.n+'</div></div>';
+  }).join("");
+
+  // F-test
+  var ftEl=document.getElementById("ftest-area");
+  if(res.groupLabels.length!==2){
+    ftEl.innerHTML='<div class="notice ni">F-test requires exactly 2 groups. Currently '+res.groupLabels.length+' group'+(res.groupLabels.length!==1?"s":"")+'.</div>';
+  } else if(!res.ftest){
+    ftEl.innerHTML='<div class="notice nw">Could not compute F-test.</div>';
+  } else {
+    var ft=res.ftest,sig=ft.p<0.05,col=sig?"var(--green)":"var(--orange)";
+    var verdict=sig
+      ?"Two separate curves fit significantly better than one shared curve — the cell lines respond differently (p = "+fmtP(ft.p)+")"
+      :"A single shared curve cannot be rejected — no significant difference between curves detected (p = "+fmtP(ft.p)+")";
+    ftEl.innerHTML='<div class="ftest-box" style="border-color:'+col+'55">'
+      +'<div class="ftest-verdict" style="color:'+col+'">'+(sig?"✓ ":"~ ")+verdict+'</div>'
+      +'<div class="ftest-stats">F('+ft.dfNum+', '+ft.dfDen+') = '+ft.F.toFixed(3)
+      +'&nbsp;&nbsp;p = '+fmtP(ft.p)+'<br>'
+      +'SS one curve: '+ft.ss_shared.toFixed(3)+'&nbsp;&nbsp;SS two curves: '+ft.ss_sep.toFixed(3)+'</div></div>';
+  }
+
+  // Side-by-side individual charts — one per group
+  var sbsEl=document.getElementById("charts-sidebyside");
+  sbsEl.innerHTML="";
+  res.groupLabels.forEach(function(lbl,i){
+    var cid="chart-sbs-"+i;
+    var div=document.createElement("div");
+    div.className="card";div.style.flex="1";div.style.minWidth="280px";
+    div.innerHTML='<div class="ch">'+lbl+' — '+res.drug+'</div>'
+      +'<div class="cb" style="padding:8px"><canvas id="'+cid+'" height="270"></canvas></div>';
+    sbsEl.appendChild(div);
+  });
+  // Draw after DOM inserted
+  setTimeout(function(){
+    res.groupLabels.forEach(function(lbl,i){ drawSingleCurve("chart-sbs-"+i,res,lbl); });
+    drawOverlay("chart-overlay",res);
+  },0);
+
+  // Data table
+  var unit=res.unit;
+  document.getElementById("dt-head").innerHTML=
+    "<th>Group</th><th>Plate</th><th>Dose ("+unit+")</th><th>Mean %</th><th>SD</th><th>n</th>";
+  var tbody=document.getElementById("dt-body");
+  tbody.innerHTML="";
+  res.groupLabels.forEach(function(lbl){
+    var pts=res.allPts[lbl],col=res.colorMap[lbl];
+    var byPD={};
+    pts.forEach(function(pt){
+      var k=pt.plateId+"|"+pt.dose;
+      if(!byPD[k]) byPD[k]={plateId:pt.plateId,dose:pt.dose,vals:[]};
+      byPD[k].vals.push(pt.pct);
+    });
+    Object.keys(byPD).sort(function(a,b){
+      var pa=byPD[a],pb=byPD[b];
+      return pa.plateId!==pb.plateId?pa.plateId-pb.plateId:pb.dose-pa.dose;
+    }).forEach(function(k){
+      var g=byPD[k];
+      var mean=g.vals.reduce(function(a,b){return a+b;},0)/g.vals.length;
+      var sd=g.vals.length>1?Math.sqrt(g.vals.reduce(function(s,v){return s+Math.pow(v-mean,2);},0)/(g.vals.length-1)):0;
+      var tr=document.createElement("tr");
+      tr.innerHTML='<td style="color:'+col+';font-weight:600">'+lbl+'</td>'
+        +'<td style="color:var(--muted)">Plate '+g.plateId+'</td>'
+        +'<td>'+g.dose+'</td><td>'+mean.toFixed(1)+'</td><td>'+sd.toFixed(1)+'</td>'
+        +'<td style="color:var(--muted)">'+g.vals.length+'</td>';
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+// ── Canvas drawing ─────────────────────────────────────────────────────────────
+function setupCanvas(id){
+  var cv=document.getElementById(id);
+  var dpr=window.devicePixelRatio||1;
+  var W=cv.parentElement.clientWidth-16,H=270;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px";
+  var ctx=cv.getContext("2d");ctx.scale(dpr,dpr);
+  return {ctx:ctx,W:W,H:H};
+}
+function drawAxes(ctx,W,H,pad,doses,unit){
+  var pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  var xMin=Math.min.apply(null,doses)*0.4,xMax=Math.max.apply(null,doses)*2.5;
+  ctx.fillStyle="#161b22";ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="rgba(48,54,61,.55)";ctx.lineWidth=1;
+  [0,25,50,75,100].forEach(function(y){
+    var py=pad.t+ph-(y/120)*ph;
+    ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(pad.l+pw,py);ctx.stroke();
+    ctx.fillStyle="#8b949e";ctx.font="10px IBM Plex Mono";ctx.textAlign="right";
+    ctx.fillText(y+"%",pad.l-5,py+4);
+  });
+  doses.forEach(function(d){
+    var px=pad.l+(Math.log10(d)-Math.log10(xMin))/(Math.log10(xMax)-Math.log10(xMin))*pw;
+    ctx.strokeStyle="rgba(48,54,61,.4)";ctx.beginPath();ctx.moveTo(px,pad.t);ctx.lineTo(px,pad.t+ph);ctx.stroke();
+    ctx.fillStyle="#8b949e";ctx.font="9px IBM Plex Mono";ctx.textAlign="center";
+    ctx.fillText(d>=1000?(d/1000).toFixed(0)+"k":String(d),px,pad.t+ph+13);
+  });
+  ctx.strokeStyle="rgba(139,148,158,.22)";ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  var py50=pad.t+ph-(50/120)*ph;
+  ctx.beginPath();ctx.moveTo(pad.l,py50);ctx.lineTo(pad.l+pw,py50);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="#8b949e";ctx.font="10px IBM Plex Sans";ctx.textAlign="center";
+  ctx.fillText("Concentration ("+unit+")",pad.l+pw/2,H-5);
+  ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText("% Viability",0,0);ctx.restore();
+  return {pw:pw,ph:ph,xMin:xMin,xMax:xMax,
+    tx:function(x){return pad.l+(Math.log10(x)-Math.log10(xMin))/(Math.log10(xMax)-Math.log10(xMin))*pw;},
+    ty:function(y){return pad.t+ph-(Math.max(0,Math.min(120,y))/120)*ph;}};
+}
+function plotFit(ctx,fit,sc,col,width){
+  if(!fit) return;
+  var rgb=hexToRgb(col);
+  var logMin=Math.log10(sc.xMin),logMax=Math.log10(sc.xMax);
+  var N=200;
+
+  // 95% CI band — vary logIC50 between log(ciLo) and log(ciHi), other params fixed
+  var _showCI=document.getElementById("show-ci");
+  if(_showCI&&_showCI.checked&&fit.ciLo&&fit.ciHi&&fit.ciLo>0&&fit.ciHi>0){
+    var logIC50_lo=Math.log10(fit.ciLo), logIC50_hi=Math.log10(fit.ciHi);
+    // upper band: whichever IC50 bound gives higher y at each x
+    // (for inhibition curves, lower IC50 = shifted left = higher y at low x)
+    var upper=[], lower=[];
+    for(var i=0;i<=N;i++){
+      var logX=logMin+(logMax-logMin)*i/N, x10=Math.pow(10,logX);
+      var yLo=fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(logIC50_lo-logX)));
+      var yHi=fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(logIC50_hi-logX)));
+      upper.push({x:sc.tx(x10),y:sc.ty(Math.max(yLo,yHi))});
+      lower.push({x:sc.tx(x10),y:sc.ty(Math.min(yLo,yHi))});
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(upper[0].x,upper[0].y);
+    for(var i=1;i<=N;i++) ctx.lineTo(upper[i].x,upper[i].y);
+    for(var i=N;i>=0;i--) ctx.lineTo(lower[i].x,lower[i].y);
+    ctx.closePath();
+    ctx.fillStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.12)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Main curve line
+  ctx.beginPath();
+  var first=true;
+  for(var i=0;i<=N;i++){
+    var logX=logMin+(logMax-logMin)*i/N,x10=Math.pow(10,logX);
+    var y=fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(fit.logIC50-logX)));
+    if(first){ctx.moveTo(sc.tx(x10),sc.ty(y));first=false;}else ctx.lineTo(sc.tx(x10),sc.ty(y));
+  }
+  ctx.strokeStyle=col;ctx.lineWidth=width||2.5;ctx.stroke();
+
+  // IC50 crosshair + dot
+  if(fit.ic50>sc.xMin&&fit.ic50<sc.xMax){
+    var ix=sc.tx(fit.ic50),iy=sc.ty(fit.bottom+(fit.top-fit.bottom)/2);
+    ctx.save();ctx.strokeStyle=col;ctx.globalAlpha=0.45;ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(ix,sc.ty(120));ctx.lineTo(ix,iy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sc.tx(sc.xMin*1.05),iy);ctx.lineTo(ix,iy);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+    ctx.beginPath();ctx.arc(ix,iy,4.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle="#0d1117";ctx.lineWidth=1;ctx.stroke();
+  }
+}
+function hexToRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+// Compute mean+SEM per dose from raw points array
+function computeMeanSEM(pts){
+  var byDose={};
+  pts.forEach(function(pt){
+    if(!byDose[pt.dose]) byDose[pt.dose]=[];
+    byDose[pt.dose].push(pt.pct);
+  });
+  return Object.keys(byDose).map(function(d){
+    var vals=byDose[d];
+    var n=vals.length;
+    var mean=vals.reduce(function(a,b){return a+b;},0)/n;
+    var sd=n>1?Math.sqrt(vals.reduce(function(s,v){return s+Math.pow(v-mean,2);},0)/(n-1)):0;
+    var sem=sd/Math.sqrt(n);
+    return {dose:parseFloat(d),mean:mean,sem:sem,n:n};
+  }).sort(function(a,b){return a.dose-b.dose;});
+}
+
+function plotMeanSEM(ctx,pts,col,sc,vehPts){
+  var rgb=hexToRgb(col);
+  var stats=computeMeanSEM(pts);
+
+  stats.forEach(function(s){
+    var px=sc.tx(s.dose), py=sc.ty(s.mean);
+    var semPx=sc.ty(s.mean-s.sem)-sc.ty(s.mean+s.sem); // pixel height of 2×SEM
+
+    // SEM error bar
+    ctx.save();
+    ctx.strokeStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.8)";
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(px,sc.ty(s.mean+s.sem));
+    ctx.lineTo(px,sc.ty(s.mean-s.sem));
+    ctx.stroke();
+    // Caps
+    ctx.beginPath();ctx.moveTo(px-4,sc.ty(s.mean+s.sem));ctx.lineTo(px+4,sc.ty(s.mean+s.sem));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px-4,sc.ty(s.mean-s.sem));ctx.lineTo(px+4,sc.ty(s.mean-s.sem));ctx.stroke();
+    ctx.restore();
+
+    // Mean point (filled circle)
+    ctx.beginPath();ctx.arc(px,py,4.5,0,Math.PI*2);
+    ctx.fillStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.9)";ctx.fill();
+    ctx.strokeStyle="#0d1117";ctx.lineWidth=1.2;ctx.stroke();
+  });
+
+  // Vehicle — mean ± SEM as open diamond with error bar
+  if(vehPts&&vehPts.length){
+    var vehX=Math.pow(10,Math.log10(sc.xMin)+0.4*0.5);
+    var vVals=vehPts.map(function(p){return p.pct;});
+    var vN=vVals.length;
+    var vMean=vVals.reduce(function(a,b){return a+b;},0)/vN;
+    var vSd=vN>1?Math.sqrt(vVals.reduce(function(s,v){return s+Math.pow(v-vMean,2);},0)/(vN-1)):0;
+    var vSem=vSd/Math.sqrt(vN);
+    var vpx=sc.tx(vehX), vpy=sc.ty(vMean);
+    // SEM bar
+    ctx.save();
+    ctx.strokeStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.8)";ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(vpx,sc.ty(vMean+vSem));ctx.lineTo(vpx,sc.ty(vMean-vSem));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(vpx-4,sc.ty(vMean+vSem));ctx.lineTo(vpx+4,sc.ty(vMean+vSem));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(vpx-4,sc.ty(vMean-vSem));ctx.lineTo(vpx+4,sc.ty(vMean-vSem));ctx.stroke();
+    // Diamond
+    var ds=6;
+    ctx.beginPath();ctx.moveTo(vpx,vpy-ds);ctx.lineTo(vpx+ds,vpy);ctx.lineTo(vpx,vpy+ds);ctx.lineTo(vpx-ds,vpy);ctx.closePath();
+    ctx.strokeStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.9)";ctx.stroke();
+    ctx.fillStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.2)";ctx.fill();
+    // Label
+    ctx.fillStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0.7)";
+    ctx.font="8px IBM Plex Mono";ctx.textAlign="center";
+    ctx.fillText("veh",vpx,sc.ty(120)+12);
+    ctx.restore();
+  }
+}
+
+function drawSingleCurve(canvasId,res,lbl){
+  var s=setupCanvas(canvasId);
+  var pad={l:52,r:16,t:16,b:42};
+  var sc=drawAxes(s.ctx,s.W,s.H,pad,res.doses,res.unit);
+  var col=res.colorMap[lbl];
+  plotMeanSEM(s.ctx,res.allPts[lbl]||[],col,sc,res.vehPts[lbl]||[]);
+  plotFit(s.ctx,res.fits[lbl],sc,col,2.5);
+}
+function drawOverlay(canvasId,res){
+  var s=setupCanvas(canvasId);
+  var pad={l:52,r:20,t:20,b:48};
+  var sc=drawAxes(s.ctx,s.W,s.H,pad,res.doses,res.unit);
+  // Shared fit dashed
+  if(res.fitShared){
+    s.ctx.save();s.ctx.setLineDash([6,3]);
+    plotFit(s.ctx,res.fitShared,sc,"rgba(200,200,200,0.45)",1.5);
+    s.ctx.setLineDash([]);s.ctx.restore();
+  }
+  res.groupLabels.forEach(function(lbl){
+    plotMeanSEM(s.ctx,res.allPts[lbl]||[],res.colorMap[lbl],sc,res.vehPts[lbl]||[]);
+    plotFit(s.ctx,res.fits[lbl],sc,res.colorMap[lbl],2.5);
+  });
+  // Legend
+  var items=res.groupLabels.map(function(lbl){return [lbl,res.colorMap[lbl]];});
+  items.push(["Shared","rgba(200,200,200,0.5)"]);
+  items.forEach(function(item,i){
+    var lx=pad.l+8,ly=pad.t+8+i*16;
+    s.ctx.fillStyle=item[1];s.ctx.fillRect(lx,ly,16,3);
+    s.ctx.fillStyle="#c9d1d9";s.ctx.font="10px IBM Plex Sans";s.ctx.textAlign="left";
+    s.ctx.fillText(item[0],lx+20,ly+4);
+  });
+}
+
+// ── Export overlay image ─────────────────────────────────────────────────────
+function exportOverlayPNG(){
+  var cv=document.getElementById("chart-overlay");
+  if(!cv){alert("Run analysis first.");return;}
+  var a=document.createElement("a");
+  a.href=cv.toDataURL("image/png");
+  a.download=(lastResults?lastResults.drug:"IC50")+"_overlay.png";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function exportOverlaySVG(){
+  if(!lastResults){alert("Run analysis first.");return;}
+  var res=lastResults;
+  var W=800,H=420;
+  var pad={l:60,r:20,t:24,b:50};
+  var pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  var doses=res.doses;
+  var xMin=Math.min.apply(null,doses)*0.4,xMax=Math.max.apply(null,doses)*2.5;
+  function tx(x){return pad.l+(Math.log10(x)-Math.log10(xMin))/(Math.log10(xMax)-Math.log10(xMin))*pw;}
+  function ty(y){return pad.t+ph-(Math.max(0,Math.min(120,y))/120)*ph;}
+
+  var svg='<?xml version="1.0" encoding="UTF-8"?>';
+  svg+='<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">';
+  svg+='<rect width="'+W+'" height="'+H+'" fill="#161b22"/>';
+
+  // Grid lines
+  [0,25,50,75,100].forEach(function(y){
+    var py=ty(y);
+    svg+='<line x1="'+pad.l+'" y1="'+py+'" x2="'+(pad.l+pw)+'" y2="'+py+'" stroke="#30363d" stroke-width="1"/>';
+    svg+='<text x="'+(pad.l-6)+'" y="'+(py+4)+'" fill="#8b949e" font-size="11" text-anchor="end">'+y+'%</text>';
+  });
+  doses.forEach(function(d){
+    var px=tx(d);
+    svg+='<line x1="'+px+'" y1="'+pad.t+'" x2="'+px+'" y2="'+(pad.t+ph)+'" stroke="#30363d" stroke-width="1"/>';
+    var lbl=d>=1000?(d/1000).toFixed(0)+"k":String(d);
+    svg+='<text x="'+px+'" y="'+(pad.t+ph+16)+'" fill="#8b949e" font-size="10" text-anchor="middle">'+lbl+'</text>';
+  });
+  // 50% dashed
+  svg+='<line x1="'+pad.l+'" y1="'+ty(50)+'" x2="'+(pad.l+pw)+'" y2="'+ty(50)+'" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>';
+
+  // Axis labels
+  svg+='<text x="'+(pad.l+pw/2)+'" y="'+(H-6)+'" fill="#8b949e" font-size="12" text-anchor="middle">Concentration ('+res.unit+')</text>';
+  svg+='<text x="14" y="'+(pad.t+ph/2)+'" fill="#8b949e" font-size="12" text-anchor="middle" transform="rotate(-90,14,'+(pad.t+ph/2)+')">% Viability</text>';
+
+  // Shared fit (dashed grey)
+  if(res.fitShared){
+    var fit=res.fitShared;
+    var pts2=[];
+    for(var i=0;i<=200;i++){var logX=Math.log10(xMin)+(Math.log10(xMax)-Math.log10(xMin))*i/200;pts2.push(tx(Math.pow(10,logX))+","+ty(fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(fit.logIC50-logX)))));}
+    svg+='<polyline points="'+pts2.join(" ")+'" fill="none" stroke="rgba(200,200,200,0.4)" stroke-width="1.5" stroke-dasharray="6,3"/>';
+  }
+
+  // Per-group: CI band + fit line + mean±SEM points
+  res.groupLabels.forEach(function(lbl){
+    var col=res.colorMap[lbl];
+    var fit=res.fits[lbl];
+    var N=200;
+    var logXMin=Math.log10(xMin),logXMax=Math.log10(xMax);
+
+    // CI band
+    var _svgCI=document.getElementById("show-ci");
+    if(_svgCI&&_svgCI.checked&&fit&&fit.ciLo>0&&fit.ciHi>0){
+      var logLo=Math.log10(fit.ciLo),logHi=Math.log10(fit.ciHi);
+      var upper=[],lower=[];
+      for(var i=0;i<=N;i++){
+        var lx=logXMin+(logXMax-logXMin)*i/N,x10=Math.pow(10,lx);
+        var yLo=fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(logLo-lx)));
+        var yHi=fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(logHi-lx)));
+        upper.push(tx(x10)+","+ty(Math.max(yLo,yHi)));
+        lower.push(tx(x10)+","+ty(Math.min(yLo,yHi)));
+      }
+      var bandPts=upper.join(" ")+" "+lower.slice().reverse().join(" ");
+      // Parse col hex to get rgb for opacity
+      var rr=parseInt(col.slice(1,3),16),gg=parseInt(col.slice(3,5),16),bb=parseInt(col.slice(5,7),16);
+      svg+='<polygon points="'+bandPts+'" fill="rgb('+rr+','+gg+','+bb+')" fill-opacity="0.12" stroke="none"/>';
+    }
+
+    // Fit line
+    if(fit){
+      var pts3=[];
+      for(var i=0;i<=N;i++){var lx=logXMin+(logXMax-logXMin)*i/N;pts3.push(tx(Math.pow(10,lx))+","+ty(fit.bottom+(fit.top-fit.bottom)/(1+Math.pow(10,fit.hill*(fit.logIC50-lx)))));}
+      svg+='<polyline points="'+pts3.join(" ")+'" fill="none" stroke="'+col+'" stroke-width="2.5"/>';
+      if(fit.ic50>xMin&&fit.ic50<xMax){
+        var ix=tx(fit.ic50),iy=ty(fit.bottom+(fit.top-fit.bottom)/2);
+        svg+='<line x1="'+ix+'" y1="'+pad.t+'" x2="'+ix+'" y2="'+iy+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>';
+        svg+='<circle cx="'+ix+'" cy="'+iy+'" r="4.5" fill="'+col+'" stroke="#161b22" stroke-width="1"/>';
+      }
+    }
+
+    // Mean ± SEM per dose
+    var stats=computeMeanSEM(res.allPts[lbl]||[]);
+    stats.forEach(function(s){
+      var px=tx(s.dose),py=ty(s.mean);
+      var pyUp=ty(s.mean+s.sem),pyDn=ty(s.mean-s.sem);
+      svg+='<line x1="'+px+'" y1="'+pyUp+'" x2="'+px+'" y2="'+pyDn+'" stroke="'+col+'" stroke-width="1.5" opacity="0.85"/>';
+      svg+='<line x1="'+(px-4)+'" y1="'+pyUp+'" x2="'+(px+4)+'" y2="'+pyUp+'" stroke="'+col+'" stroke-width="1.5" opacity="0.85"/>';
+      svg+='<line x1="'+(px-4)+'" y1="'+pyDn+'" x2="'+(px+4)+'" y2="'+pyDn+'" stroke="'+col+'" stroke-width="1.5" opacity="0.85"/>';
+      svg+='<circle cx="'+px+'" cy="'+py+'" r="4.5" fill="'+col+'" fill-opacity="0.9" stroke="#161b22" stroke-width="1.2"/>';
+    });
+
+    // Vehicle mean ± SEM as diamond
+    var vehX=Math.pow(10,logXMin+0.4*0.5);
+    var vPts=res.vehPts[lbl]||[];
+    if(vPts.length){
+      var vVals=vPts.map(function(p){return p.pct;});
+      var vN=vVals.length,vMean=vVals.reduce(function(a,b){return a+b;},0)/vN;
+      var vSd=vN>1?Math.sqrt(vVals.reduce(function(s,v){return s+Math.pow(v-vMean,2);},0)/(vN-1)):0;
+      var vSem=vSd/Math.sqrt(vN);
+      var vpx=tx(vehX),vpy=ty(vMean),ds=6;
+      svg+='<line x1="'+vpx+'" y1="'+ty(vMean+vSem)+'" x2="'+vpx+'" y2="'+ty(vMean-vSem)+'" stroke="'+col+'" stroke-width="1.5" opacity="0.85"/>';
+      svg+='<polygon points="'+vpx+','+(vpy-ds)+' '+(vpx+ds)+','+vpy+' '+vpx+','+(vpy+ds)+' '+(vpx-ds)+','+vpy+'" fill="'+col+'" fill-opacity="0.2" stroke="'+col+'" stroke-width="1.5" opacity="0.9"/>';
+    }
+  });
+
+  // Legend
+  var ly=pad.t+10;
+  res.groupLabels.forEach(function(lbl){
+    var col=res.colorMap[lbl];
+    svg+='<rect x="'+(pad.l+10)+'" y="'+ly+'" width="18" height="3" fill="'+col+'"/>';
+    svg+='<text x="'+(pad.l+32)+'" y="'+(ly+4)+'" fill="#c9d1d9" font-size="11">'+lbl+'</text>';
+    ly+=18;
+  });
+  svg+='<rect x="'+(pad.l+10)+'" y="'+ly+'" width="18" height="3" fill="rgba(200,200,200,0.4)"/>';
+  svg+='<text x="'+(pad.l+32)+'" y="'+(ly+4)+'" fill="#c9d1d9" font-size="11">Shared fit</text>';
+
+  svg+='</svg>';
+  var blob=new Blob([svg],{type:"image/svg+xml"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;a.download=(res.drug||"IC50")+"_overlay.svg";
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},100);
+}
+
+// ── Export MD ─────────────────────────────────────────────────────────────────
+function exportMD(){
+  if(!lastResults){alert("Run analysis first.");return;}
+  var res=lastResults,NL=String.fromCharCode(10);
+  var date=new Date().toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"});
+  var md="# IC50 Analysis: "+res.drug+NL+"_Generated: "+date+" | Sarah Hancock's Lab Tools_"+NL+NL+"---"+NL+NL;
+  md+="## Curve Fits"+NL+NL;
+  res.groupLabels.forEach(function(lbl){
+    var fit=res.fits[lbl];
+    md+="### "+lbl+NL;
+    if(!fit){md+="No fit available"+NL+NL;return;}
+    md+="**IC50:** "+fmtIC50(fit.ic50,res.unit)+NL
+      +"**95% CI:** "+fmtIC50(fit.ciLo,res.unit)+" – "+fmtIC50(fit.ciHi,res.unit)+NL
+      +"**Hill:** "+fit.hill.toFixed(3)+" | **R²:** "+fit.r2.toFixed(4)+" | **n:** "+fit.n+NL
+      +"**Top:** "+fit.top.toFixed(1)+"% | **Bottom:** "+fit.bottom.toFixed(1)+"%"+NL+NL;
+  });
+  if(res.ftest){
+    var ft=res.ftest;
+    md+="## One vs Two Curves (F-test)"+NL+NL;
+    md+=(ft.p<0.05?"**Curves are significantly different** — two-curve model is better":"**Shared curve cannot be rejected** — no significant difference")+NL;
+    md+="F("+ft.dfNum+","+ft.dfDen+") = "+ft.F.toFixed(3)+" | p = "+fmtP(ft.p)+NL+NL;
+  }
+  md+="## Normalised Data"+NL+NL;
+  md+="| Group | Plate | Dose ("+res.unit+") | Mean % Viability | SD | n |"+NL;
+  md+="|---|---|---|---|---|---|"+NL;
+  res.groupLabels.forEach(function(lbl){
+    var pts=res.allPts[lbl],byPD={};
+    pts.forEach(function(pt){var k=pt.plateId+"|"+pt.dose;if(!byPD[k]) byPD[k]={plateId:pt.plateId,dose:pt.dose,vals:[]};byPD[k].vals.push(pt.pct);});
+    Object.keys(byPD).sort(function(a,b){var pa=byPD[a],pb=byPD[b];return pa.plateId!==pb.plateId?pa.plateId-pb.plateId:pb.dose-pa.dose;}).forEach(function(k){
+      var g=byPD[k],mean=g.vals.reduce(function(a,b){return a+b;},0)/g.vals.length;
+      var sd=g.vals.length>1?Math.sqrt(g.vals.reduce(function(s,v){return s+Math.pow(v-mean,2);},0)/(g.vals.length-1)):0;
+      md+="| "+lbl+" | Plate "+g.plateId+" | "+g.dose+" | "+mean.toFixed(1)+" | "+sd.toFixed(1)+" | "+g.vals.length+" |"+NL;
+    });
+  });
+  md+=NL+"---"+NL+"_Copy into LabArchives or any markdown notebook._"+NL;
+  var blob=new Blob([md],{type:"text/plain"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;a.download="ic50_"+res.drug+".md";
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},100);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// (nothing needed)
+</script>
+</body>
+</html>

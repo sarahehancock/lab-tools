@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCA Assay Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2330; --border:#30363d;
+  --accent:#58a6ff; --green:#3fb950; --orange:#f0883e; --red:#f85149;
+  --muted:#8b949e; --text:#e6edf3; --text2:#c9d1d9;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{font-family:var(--mono);font-weight:600;color:var(--accent);font-size:13px;letter-spacing:.05em}
+.badge{background:rgba(88,166,255,.12);color:var(--accent);border:1px solid rgba(88,166,255,.25);padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--mono)}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:270px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.main{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-body{padding:12px}
+label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+.f{margin-bottom:10px}.f:last-child{margin-bottom:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#0d1117}.btn-p:hover{background:#79c0ff}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.sep{height:1px;background:var(--border);margin:8px 0}
+
+/* Mode pills */
+.mode-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.mpill{padding:5px 11px;border-radius:12px;font-size:11px;font-family:var(--mono);cursor:pointer;border:1px solid var(--border);color:var(--muted);transition:all .12s;user-select:none}
+.mpill:hover{border-color:var(--accent);color:var(--accent)}
+.mpill.act-std{background:var(--accent);border-color:var(--accent);color:#0d1117;font-weight:600}
+.mpill.act-sample{background:var(--green);border-color:var(--green);color:#0d1117;font-weight:600}
+.mpill.act-blank{background:var(--muted);border-color:var(--muted);color:#0d1117;font-weight:600}
+.mpill.act-exclude{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+.mpill.act-clear{background:var(--orange);border-color:var(--orange);color:#0d1117;font-weight:600}
+
+/* Plate */
+.plate-outer{overflow-x:auto;padding-bottom:4px}
+.plate{display:inline-grid;grid-template-columns:22px repeat(12,44px);gap:2px;font-family:var(--mono);font-size:10px;user-select:none}
+.ph{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:9px;font-weight:600}
+.well{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background .08s,border-color .08s;position:relative;font-size:8.5px;line-height:1.25;text-align:center}
+.well:hover{border-color:var(--accent)!important}
+.well.sel{outline:2.5px solid white;outline-offset:1px;z-index:2}
+.well[data-t="std"]{background:rgba(88,166,255,.18);border-color:rgba(88,166,255,.5);color:var(--accent)}
+.well[data-t="blank"]{background:rgba(139,148,158,.12);border-color:rgba(139,148,158,.35);color:var(--muted)}
+.well[data-t="exclude"]{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.35);color:var(--red);opacity:.65}
+.well[data-t="sample"]{border-color:rgba(63,185,80,.5)}
+.well.flagged{outline:2px solid var(--orange)!important;outline-offset:1px}
+.wval{font-weight:600;font-size:9px}
+.wlbl{font-size:7.5px;opacity:.85}
+
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.ld{width:10px;height:10px;border-radius:50%;border:1.5px solid;flex-shrink:0}
+
+/* Std table */
+.std-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.std-table th{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}
+.std-table td{padding:3px 6px;border-bottom:1px solid rgba(48,54,61,.4)}
+.std-table tr:last-child td{border-bottom:none}
+.std-table input{padding:3px 5px;font-size:11px;width:90px}
+
+/* Sample groups */
+.sg-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(48,54,61,.4);font-size:11px}
+.sg-row:last-child{border-bottom:none}
+.sg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sg-wells{color:var(--muted);font-family:var(--mono);font-size:9px;flex:1;line-height:1.4}
+.sg-lbl input{width:80px;padding:2px 5px;font-size:11px}
+
+/* Results table */
+table.res{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+table.res th{background:var(--surface2);color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
+table.res td{padding:6px 10px;border-bottom:1px solid rgba(48,54,61,.4);color:var(--text2)}
+table.res tr:last-child td{border-bottom:none}
+table.res tr:hover td{background:rgba(255,255,255,.02)}
+.bwarn{background:rgba(240,136,62,.15);color:var(--orange);padding:1px 6px;border-radius:4px;font-size:10px}
+.bok{background:rgba(63,185,80,.1);color:var(--green);padding:1px 6px;border-radius:4px;font-size:10px}
+
+.stat-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;min-width:100px}
+.sv{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent)}
+.sl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+
+.notice{padding:8px 12px;border-radius:6px;font-size:11px;display:flex;align-items:flex-start;gap:6px;margin-bottom:8px}
+.notice:last-child{margin-bottom:0}
+.nw{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange)}
+.ns{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+.ni{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--accent)}
+
+.flex{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+canvas{display:block;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⬡ LAB·TOOLS</div>
+  <div class="badge">BCA Protein Assay</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-s" onclick="exportCSV()">⬇ Export CSV</button>
+</header>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="card">
+    <div class="card-head">📋 Paste Data</div>
+    <div class="card-body">
+      <div class="f">
+        <textarea id="paste-area" rows="5" placeholder="Paste tab-delimited plate reader export. Headers auto-stripped."></textarea>
+      </div>
+      <div class="flex">
+        <button class="btn btn-p grow" onclick="parseData()">→ Load</button>
+        <button class="btn btn-s" onclick="loadExample()">Example</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">🖱 Assign Wells</div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+        <b>1.</b> Click &amp; drag on the plate to select wells (white outline)<br>
+        <b>2.</b> Click a button below to assign them
+      </div>
+      <div class="mode-row" id="mode-pills">
+        <div class="mpill act-std" id="mpill-std" onclick="assignSelected('std')">Std</div>
+        <div class="mpill" id="mpill-sample" onclick="assignSelected('sample')">Sample</div>
+        <div class="mpill" id="mpill-blank" onclick="assignSelected('blank')">Blank</div>
+        <div class="mpill" id="mpill-exclude" onclick="assignSelected('exclude')">Exclude</div>
+        <div class="mpill" id="mpill-clear" onclick="assignSelected('clear')">Clear</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted)">Selected: <span id="sel-count" style="color:var(--text2);font-family:var(--mono)">0 wells</span></div>
+      <div class="sep"></div>
+      <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">⚡ Auto-split into groups</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.5">Select a <b style="color:var(--green)">Sample</b> block on the plate, set reps &amp; direction, then auto-split into labelled groups.</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <div style="flex:1"><label>Reps/sample</label><input type="number" id="auto-reps" value="3" min="1" max="12"></div>
+        <div style="flex:1"><label>Group along</label><select id="auto-dir"><option value="col">↓ Cols</option><option value="row">→ Rows</option></select></div>
+      </div>
+      <button class="btn btn-s" style="width:100%;margin-bottom:8px;font-size:11px" onclick="autoAssignSamples()">⚡ Auto-split selection</button>
+      <div class="sep"></div>
+      <div class="flex">
+        <button class="btn btn-s grow" onclick="clearAll()">Reset All</button>
+        <button class="btn btn-p grow" onclick="runAnalysis()">▶ Run</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">⚙ Options</div>
+    <div class="card-body">
+      <div class="f">
+        <label>Std Replicate Direction</label>
+        <div style="display:flex;gap:4px">
+          <div class="mpill act-std" id="dir-col" onclick="setStdDir('col')" style="flex:1;text-align:center">↓ Columns</div>
+          <div class="mpill" id="dir-row" onclick="setStdDir('row')" style="flex:1;text-align:center">→ Rows</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px" id="dir-hint">Replicates run down each column. Each column = one concentration.</div>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Curve Fit</label>
+        <select id="fit-type">
+          <option value="linear">Linear</option>
+          <option value="poly2">Polynomial (2nd order)</option>
+          <option value="3pl">3-Parameter Logistic (3PL)</option>
+          <option value="4pl">4-Parameter Logistic (4PL)</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>Dilution Factor</label>
+        <input type="number" id="dilution" value="1" min="0.001" step="0.1">
+      </div>
+      <div class="f">
+        <label>CV% Flag Threshold</label>
+        <input type="number" id="cv-thresh" value="10" min="1" max="100">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Plate -->
+  <div class="card">
+    <div class="card-head">
+      🔬 Plate Map
+      <span style="flex:1"></span>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:rgba(88,166,255,.18);border-color:rgba(88,166,255,.5)"></div>Std</div>
+        <div class="li"><div class="ld" style="background:rgba(63,185,80,.18);border-color:rgba(63,185,80,.5)"></div>Sample</div>
+        <div class="li"><div class="ld" style="background:rgba(139,148,158,.12);border-color:rgba(139,148,158,.35)"></div>Blank</div>
+        <div class="li"><div class="ld" style="background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.35)"></div>Excl</div>
+        <div class="li"><div class="ld" style="border:2px solid var(--orange);background:transparent"></div>Flagged</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="plate-outer">
+        <div class="plate" id="plate"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Std amounts + Sample groups -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="card" style="flex:1;min-width:240px">
+      <div class="card-head">📐 Standard Amounts</div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="std-dir-hint">
+          Each <b style="color:var(--text2)">column</b> of Std wells = one concentration point. Enter amounts in <b style="color:var(--accent)">µg/mL (micrograms/mL)</b> — NOT mg/mL.
+        </div>
+        <label>Paste amounts from Excel (one per line)</label>
+        <textarea id="amt-paste" rows="3" placeholder="Values in µg/mL (micrograms/mL)&#10;e.g. for BSA standard curve:&#10;0&#10;125&#10;250&#10;500&#10;750&#10;1000&#10;1500&#10;2000" style="font-size:11px;margin-bottom:6px"></textarea>
+        <button class="btn btn-s" style="width:100%;font-size:11px;margin-bottom:8px" onclick="applyPastedAmounts()">↳ Apply amounts to standards in order</button>
+        <div class="sep"></div>
+        <div id="std-rows">
+          <div class="notice ni">Assign Std wells on the plate first — amounts will appear here.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1;min-width:240px">
+      <div class="card-head">🧪 Sample Groups</div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+          Groups are created by selecting wells &amp; assigning, or via auto-split. Paste labels from Excel to rename in order.
+        </div>
+        <label>Paste labels from Excel (one per line)</label>
+        <textarea id="label-paste" rows="3" placeholder="Ctrl+V a single column from Excel&#10;Control&#10;Drug 10µM&#10;Drug 50µM" style="font-size:11px;margin-bottom:6px"></textarea>
+        <button class="btn btn-s" style="width:100%;font-size:11px;margin-bottom:8px" onclick="applyPastedLabels()">↳ Apply labels to groups in order</button>
+        <div class="sep"></div>
+        <div id="sg-rows"><div style="font-size:11px;color:var(--muted)">No sample groups yet.</div></div>
+        <div class="sep"></div>
+        <button class="btn btn-s" style="font-size:11px" onclick="mergeLastGroups()">⊕ Merge last 2 groups</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Curve + Results -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="card" style="flex:1;min-width:280px">
+      <div class="card-head">📈 Standard Curve</div>
+      <div class="card-body">
+        <canvas id="curve-canvas" height="230"></canvas>
+        <div class="stat-row" id="curve-stats" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="card" style="flex:1.6;min-width:340px">
+      <div class="card-head">📊 Results</div>
+      <div class="card-body">
+        <div id="flags-out"></div>
+        <div style="overflow-x:auto">
+          <table class="res">
+            <thead><tr>
+              <th>Sample</th><th>n</th><th>Abs (corr.)</th><th>Conc <span style="text-transform:none">(µg/mL)</span></th><th>±SEM</th><th>CV%</th><th>Status</th>
+            </tr></thead>
+            <tbody id="res-body">
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Assign wells and run analysis.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const ROWS=['A','B','C','D','E','F','G','H'];
+const COLS=[1,2,3,4,5,6,7,8,9,10,11,12];
+const SAMPLE_COLORS=['#3fb950','#58a6ff','#f0883e','#a371f7','#ffa657','#79c0ff','#56d364','#ff7b72','#d2a8ff','#e3b341'];
+
+let plateData={}, wellType={}, wellGroup={};
+let sampleGroups=[], nextGroupId=0;
+let selSet=new Set();
+let isDragging=false, dragAnchor=null;
+let stdAmounts={}; // key → number  (key = col int when dir=col, row letter when dir=row)
+let flaggedWells=new Set();
+let stdDir='col'; // 'col' or 'row'
+
+const wkey=(r,c)=>r+c;
+
+// ── Build plate ───────────────────────────────────────────────────────────────
+function buildPlate(){
+  const p=document.getElementById('plate'); p.innerHTML='';
+  p.appendChild(el('div','ph'));
+  COLS.forEach(c=>{ const d=el('div','ph'); d.textContent=c; p.appendChild(d); });
+  ROWS.forEach(r=>{
+    const rl=el('div','ph'); rl.textContent=r; p.appendChild(rl);
+    COLS.forEach(c=>{
+      const k=wkey(r,c);
+      const w=el('div','well'); w.id='w_'+k; w.dataset.key=k;
+      w.addEventListener('mousedown',e=>{ e.preventDefault(); startDrag(k); });
+      w.addEventListener('mouseover',()=>{ if(isDragging) extendDrag(k); });
+      p.appendChild(w);
+    });
+  });
+  document.addEventListener('mouseup',endDrag);
+  renderAllWells();
+}
+
+function el(tag,cls){ const d=document.createElement(tag); if(cls) d.className=cls; return d; }
+
+// ── Selection ─────────────────────────────────────────────────────────────────
+function startDrag(k){ isDragging=true; dragAnchor=k; selSet=new Set([k]); updateSelCount(); renderAllWells(); }
+function extendDrag(k){
+  if(!isDragging||!dragAnchor) return;
+  const r0=ROWS.indexOf(dragAnchor[0]), c0=COLS.indexOf(parseInt(dragAnchor.slice(1)));
+  const r1=ROWS.indexOf(k[0]), c1=COLS.indexOf(parseInt(k.slice(1)));
+  const rMin=Math.min(r0,r1),rMax=Math.max(r0,r1),cMin=Math.min(c0,c1),cMax=Math.max(c0,c1);
+  selSet=new Set();
+  for(let ri=rMin;ri<=rMax;ri++) for(let ci=cMin;ci<=cMax;ci++) selSet.add(wkey(ROWS[ri],COLS[ci]));
+  updateSelCount(); renderAllWells();
+}
+function endDrag(){ isDragging=false; }
+function updateSelCount(){ document.getElementById('sel-count').textContent=selSet.size+' well'+(selSet.size===1?'':'s'); }
+
+// ── Assign ────────────────────────────────────────────────────────────────────
+function assignSelected(type){
+  if(selSet.size===0){ return; }
+  const wells=[...selSet];
+
+  if(type==='sample'){
+    const color=SAMPLE_COLORS[nextGroupId%SAMPLE_COLORS.length];
+    const label='S'+(nextGroupId+1);
+    // remove from existing groups first
+    wells.forEach(k=>removeWellFromGroups(k));
+    wells.forEach(k=>{ wellType[k]='sample'; wellGroup[k]=nextGroupId; });
+    sampleGroups.push({id:nextGroupId,label,wells:[...wells],color});
+    nextGroupId++;
+  } else if(type==='clear'){
+    wells.forEach(k=>{ removeWellFromGroups(k); delete wellType[k]; delete wellGroup[k]; });
+  } else {
+    wells.forEach(k=>{ removeWellFromGroups(k); wellType[k]=type; delete wellGroup[k]; });
+  }
+
+  selSet=new Set(); updateSelCount();
+  renderAllWells(); updateStdRows(); updateSgRows();
+}
+
+function removeWellFromGroups(k){
+  sampleGroups=sampleGroups.map(g=>({...g,wells:g.wells.filter(w=>w!==k)})).filter(g=>g.wells.length>0);
+}
+
+// ── Render wells ──────────────────────────────────────────────────────────────
+function renderAllWells(){ ROWS.forEach(r=>COLS.forEach(c=>renderWell(wkey(r,c)))); }
+
+function renderWell(k){
+  const el=document.getElementById('w_'+k); if(!el) return;
+  const t=wellType[k]||'';
+  el.dataset.t=t;
+  el.classList.toggle('sel',selSet.has(k));
+  el.classList.toggle('flagged',flaggedWells.has(k));
+  const v=plateData[k]; const vs=v!==undefined?v.toFixed(3):'—';
+
+  if(t==='sample'){
+    const g=sampleGroups.find(g=>g.wells.includes(k));
+    const col=g?g.color:'#3fb950';
+    el.style.cssText=`background:${hexA(col,.15)};border-color:${hexA(col,.55)};color:${col}`;
+    el.innerHTML=`<div class="wval">${vs}</div><div class="wlbl">${g?g.label.slice(0,6):'?'}</div>`;
+  } else {
+    el.style.cssText='';
+    if(t==='std')    el.innerHTML=`<div class="wval">${vs}</div><div class="wlbl">STD</div>`;
+    else if(t==='blank') el.innerHTML=`<div class="wval">${vs}</div><div class="wlbl">BLK</div>`;
+    else if(t==='exclude') el.innerHTML=`<div class="wval">${vs}</div><div class="wlbl">✕</div>`;
+    else el.innerHTML=`<div class="wval">${vs}</div>`;
+  }
+}
+
+function hexA(hex,a){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgba(${r},${g},${b},${a})`; }
+
+// ── Std direction ─────────────────────────────────────────────────────────────
+function setStdDir(dir){
+  stdDir=dir;
+  stdAmounts={}; // reset amounts when direction changes
+  document.getElementById('dir-col').className='mpill'+(dir==='col'?' act-std':'');
+  document.getElementById('dir-row').className='mpill'+(dir==='row'?' act-std':'');
+  const hints={
+    col:'Replicates run down each column. Each column = one concentration.',
+    row:'Replicates run across each row. Each row = one concentration.'
+  };
+  document.getElementById('dir-hint').textContent=hints[dir];
+  const panelHints={
+    col:'Each <b style="color:var(--text2)">column</b> of Std wells = one concentration point. Enter in <b style="color:var(--accent)">µg/mL (micrograms/mL)</b> — NOT mg/mL.',
+    row:'Each <b style="color:var(--text2)">row</b> of Std wells = one concentration point. Enter in <b style="color:var(--accent)">µg/mL (micrograms/mL)</b> — NOT mg/mL.'
+  };
+  document.getElementById('std-dir-hint').innerHTML=panelHints[dir]+' Enter its amount below.';
+  updateStdRows();
+}
+
+// ── Std rows ──────────────────────────────────────────────────────────────────
+function getStdGroups(){
+  // Returns array of {key, label, wells} sorted in plate order
+  if(stdDir==='col'){
+    const s=new Set();
+    ROWS.forEach(r=>COLS.forEach(c=>{ if(wellType[wkey(r,c)]==='std') s.add(c); }));
+    return [...s].sort((a,b)=>a-b).map(c=>({
+      key:c,
+      label:'Col '+c,
+      wells:ROWS.filter(r=>wellType[wkey(r,c)]==='std').map(r=>r+c)
+    }));
+  } else {
+    const s=new Set();
+    ROWS.forEach(r=>COLS.forEach(c=>{ if(wellType[wkey(r,c)]==='std') s.add(r); }));
+    return [...s].sort((a,b)=>ROWS.indexOf(a)-ROWS.indexOf(b)).map(r=>({
+      key:r,
+      label:'Row '+r,
+      wells:COLS.filter(c=>wellType[wkey(r,c)]==='std').map(c=>r+c)
+    }));
+  }
+}
+
+function updateStdRows(){
+  const groups=getStdGroups();
+  const div=document.getElementById('std-rows');
+  if(groups.length===0){ div.innerHTML='<div class="notice ni">Assign Std wells on the plate first — amounts will appear here.</div>'; return; }
+  const t=document.createElement('table'); t.className='std-table';
+  const hdr=stdDir==='col'?'Col':'Row';
+  t.innerHTML=`<thead><tr><th>${hdr}</th><th>Std Wells</th><th>Amount <span style="text-transform:none">(µg/mL)</span></th></tr></thead>`;
+  const tb=document.createElement('tbody');
+  groups.forEach(({key,label,wells})=>{
+    const tr=document.createElement('tr');
+    const cur=stdAmounts[key]!==undefined?stdAmounts[key]:'';
+    const dataAttr=typeof key==='number'?`data-col="${key}"`:`data-row="${key}"`;
+    tr.innerHTML=`<td style="color:var(--accent);font-weight:600">${label}</td><td style="color:var(--muted)">${wells.join(', ')}</td><td><input type="number" min="0" step="any" value="${cur}" placeholder="µg/mL e.g. 500" ${dataAttr} oninput="stdAmounts[this.dataset.col||this.dataset.row]=this.value===''?undefined:+this.value"></td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); div.innerHTML=''; div.appendChild(t);
+}
+
+// ── Sample group rows ──────────────────────────────────────────────────────────
+function updateSgRows(){
+  const div=document.getElementById('sg-rows');
+  if(sampleGroups.length===0){ div.innerHTML='<div style="font-size:11px;color:var(--muted)">No sample groups yet.</div>'; return; }
+  div.innerHTML='';
+  sampleGroups.forEach(g=>{
+    const row=document.createElement('div'); row.className='sg-row';
+    const preview=g.wells.slice(0,10).join(' ')+(g.wells.length>10?` +${g.wells.length-10}…`:'');
+    row.innerHTML=`<div class="sg-dot" style="background:${g.color}"></div>
+      <input value="${g.label}" data-id="${g.id}" oninput="renameGroup(+this.dataset.id,this.value)" style="width:80px;padding:2px 5px;font-size:11px;flex-shrink:0">
+      <div class="sg-wells grow">${preview}</div>
+      <button class="btn btn-s" style="padding:2px 6px;font-size:10px;flex-shrink:0" onclick="deleteGroup(${g.id})">✕</button>`;
+    div.appendChild(row);
+  });
+}
+
+function renameGroup(id,label){ const g=sampleGroups.find(g=>g.id===id); if(g){g.label=label; renderAllWells();} }
+function deleteGroup(id){
+  const g=sampleGroups.find(g=>g.id===id);
+  if(g) g.wells.forEach(k=>{ delete wellType[k]; delete wellGroup[k]; });
+  sampleGroups=sampleGroups.filter(g=>g.id!==id);
+  renderAllWells(); updateSgRows();
+}
+function mergeLastGroups(){
+  if(sampleGroups.length<2) return;
+  const b=sampleGroups.pop(), a=sampleGroups[sampleGroups.length-1];
+  b.wells.forEach(k=>{ a.wells.push(k); wellGroup[k]=a.id; });
+  renderAllWells(); updateSgRows();
+}
+
+// ── Regression ────────────────────────────────────────────────────────────────
+function linReg(xs,ys){
+  const n=xs.length,sx=xs.reduce((a,b)=>a+b,0),sy=ys.reduce((a,b)=>a+b,0);
+  const sxy=xs.reduce((s,x,i)=>s+x*ys[i],0),sxx=xs.reduce((s,x)=>s+x*x,0);
+  const m=(n*sxy-sx*sy)/(n*sxx-sx*sx),b=(sy-m*sx)/n;
+  const yh=xs.map(x=>m*x+b),r2=1-ys.reduce((s,y,i)=>s+(y-yh[i])**2,0)/ys.reduce((s,y)=>s+(y-sy/n)**2,0);
+  return{m,b,r2,predict:x=>m*x+b,invert:y=>(y-b)/m};
+}
+function poly2(xs,ys){
+  const n=xs.length;
+  const s1=xs.reduce((a,b)=>a+b,0),s2=xs.reduce((a,b)=>a+b**2,0),s3=xs.reduce((a,b)=>a+b**3,0),s4=xs.reduce((a,b)=>a+b**4,0);
+  const t0=ys.reduce((a,b)=>a+b,0),t1=xs.reduce((s,x,i)=>s+x*ys[i],0),t2=xs.reduce((s,x,i)=>s+x**2*ys[i],0);
+  const M=[[n,s1,s2,t0],[s1,s2,s3,t1],[s2,s3,s4,t2]];
+  for(let p=0;p<3;p++){let mx=p;for(let r=p+1;r<3;r++)if(Math.abs(M[r][p])>Math.abs(M[mx][p]))mx=r;[M[p],M[mx]]=[M[mx],M[p]];for(let r=p+1;r<3;r++){const f=M[r][p]/M[p][p];for(let c=p;c<=3;c++)M[r][c]-=f*M[p][c];}}
+  const x=[0,0,0];for(let i=2;i>=0;i--){x[i]=M[i][3];for(let j=i+1;j<3;j++)x[i]-=M[i][j]*x[j];x[i]/=M[i][i];}
+  const [a,b,c]=x;
+  const yh=xs.map(x=>a+b*x+c*x**2),r2=1-ys.reduce((s,y,i)=>s+(y-yh[i])**2,0)/ys.reduce((s,y)=>s+(y-t0/n)**2,0);
+  const predict=x=>a+b*x+c*x**2;
+  const invert=y=>{if(Math.abs(c)<1e-10)return(y-a)/b;const d=b**2-4*c*(a-y);if(d<0)return NaN;const x1=(-b+Math.sqrt(d))/(2*c),x2=(-b-Math.sqrt(d))/(2*c);return(x1>=0&&x2>=0)?Math.min(x1,x2):x1>=0?x1:x2;};
+  return{a,b,c,r2,predict,invert};
+}
+
+
+// ── 3PL / 4PL via Levenberg-Marquardt ─────────────────────────────────────────
+// y = d + (a - d) / (1 + (x/c)^b)
+// 3PL: fix a = 0 (bottom = 0 after blank correction)
+// 4PL: fit a freely
+function sigmoidalFit(xs, ys, fourPL) {
+  const n = xs.length;
+  const ymx = Math.max(...ys), ymn = Math.min(...ys);
+  const sorted = [...xs].sort((a,b)=>a-b);
+  const xmid = sorted[Math.floor(sorted.length/2)] || 1;
+  // [a=bottom, b=hill, c=EC50, d=top]
+  let p = fourPL ? [Math.max(0,ymn), 1, xmid, ymx] : [0, 1, xmid, ymx];
+  const fixed = !fourPL; // 3PL fixes a=0
+  const pidx = fixed ? [1,2,3] : [0,1,2,3];
+  const np = pidx.length;
+
+  const pred = (p, x) => p[3] + (p[0]-p[3]) / (1 + Math.pow(Math.max(x,1e-12)/Math.max(p[2],1e-9), p[1]));
+  const ssr  = (p) => ys.reduce((s,y,i) => s + (y - pred(p, xs[i]))**2, 0);
+
+  let lam = 0.01, prevSSR = ssr(p);
+  for (let iter = 0; iter < 600; iter++) {
+    const eps = 1e-7;
+    // Jacobian (n x np)
+    const J = Array.from({length:n}, (_,i) => pidx.map(pi => {
+      const pp = [...p]; pp[pi] += eps;
+      return (pred(pp, xs[i]) - pred(p, xs[i])) / eps;
+    }));
+    const res = ys.map((y,i) => y - pred(p, xs[i]));
+    // JtJ and Jt*res
+    const JtJ = Array.from({length:np}, (_,i) => Array.from({length:np}, (_,j) => J.reduce((s,r)=>s+r[i]*r[j],0)));
+    const Jtr = Array.from({length:np}, (_,i) => J.reduce((s,r,ri)=>s+r[i]*res[ri],0));
+    for (let i=0;i<np;i++) JtJ[i][i] *= (1+lam);
+    // Gauss elimination
+    const M = JtJ.map((r,i)=>[...r,Jtr[i]]);
+    for (let pp=0;pp<np;pp++) {
+      let mx=pp; for(let r=pp+1;r<np;r++) if(Math.abs(M[r][pp])>Math.abs(M[mx][pp])) mx=r;
+      [M[pp],M[mx]]=[M[mx],M[pp]];
+      for(let r=pp+1;r<np;r++){const f=M[r][pp]/M[pp][pp]; for(let c=pp;c<=np;c++) M[r][c]-=f*M[pp][c];}
+    }
+    const delta = new Array(np).fill(0);
+    for(let i=np-1;i>=0;i--){delta[i]=M[i][np];for(let j=i+1;j<np;j++) delta[i]-=M[i][j]*delta[j]; delta[i]/=M[i][i];}
+    const pNew = [...p];
+    pidx.forEach((pi,ii) => { pNew[pi] = p[pi] + delta[ii]; });
+    pNew[2] = Math.max(pNew[2], 1e-9);  // EC50 > 0
+    pNew[1] = Math.max(pNew[1], 0.01);  // hill > 0
+    const newSSR = ssr(pNew);
+    if (newSSR < prevSSR) { p = pNew; prevSSR = newSSR; lam *= 0.3; }
+    else { lam *= 3; }
+    if (lam > 1e10 || delta.every(d => Math.abs(d) < 1e-10)) break;
+  }
+  const [a,b,c,d] = p;
+  const ybar = ys.reduce((s,v)=>s+v,0)/n;
+  const r2 = 1 - prevSSR / ys.reduce((s,y)=>s+(y-ybar)**2,0);
+  const predict = x => pred(p, x);
+  const invert = y => {
+    const inner = (a - d) / (y - d) - 1;
+    if (inner <= 0) return NaN;
+    return c * Math.pow(inner, 1/b);
+  };
+  return {a, b, c, d, r2, predict, invert};
+}
+
+// ── Auto-assign samples ────────────────────────────────────────────────────────
+function autoAssignSamples(){
+  if(selSet.size===0){ alert('Select wells on the plate first, then click Auto-split.'); return; }
+  const reps = parseInt(document.getElementById('auto-reps').value)||3;
+  const dir  = document.getElementById('auto-dir').value;
+  const wells = [...selSet].sort((a,b)=>{
+    const ra=ROWS.indexOf(a[0]),rb=ROWS.indexOf(b[0]);
+    const ca=parseInt(a.slice(1)),cb=parseInt(b.slice(1));
+    return dir==='col' ? (ca!==cb?ca-cb:ra-rb) : (ra!==rb?ra-rb:ca-cb);
+  });
+  wells.forEach(k=>removeWellFromGroups(k));
+  for(let i=0;i<wells.length;i+=reps){
+    const chunk=wells.slice(i,i+reps);
+    const color=SAMPLE_COLORS[nextGroupId%SAMPLE_COLORS.length];
+    chunk.forEach(k=>{ wellType[k]='sample'; wellGroup[k]=nextGroupId; });
+    sampleGroups.push({id:nextGroupId,label:'S'+(nextGroupId+1),wells:chunk,color});
+    nextGroupId++;
+  }
+  selSet=new Set(); updateSelCount();
+  renderAllWells(); updateSgRows();
+}
+
+// ── Apply pasted std amounts ───────────────────────────────────────────────────
+function applyPastedAmounts(){
+  const raw=document.getElementById('amt-paste').value;
+  const vals=raw.split(/[\n\t]/).map(s=>s.trim()).filter(s=>s!=='').map(s=>parseFloat(s.replace(',','.')));
+  if(!vals.length||vals.some(isNaN)){ alert('Could not parse amounts — paste numbers only, one per line.'); return; }
+  const groups=getStdGroups();
+  vals.forEach((v,i)=>{ if(i<groups.length) stdAmounts[groups[i].key]=v; });
+  document.getElementById('amt-paste').value='';
+  updateStdRows();
+}
+
+// ── Apply pasted labels ────────────────────────────────────────────────────────
+function applyPastedLabels(){
+  const raw=document.getElementById('label-paste').value;
+  const labels=raw.split(/[\n\t]/).map(s=>s.trim()).filter(s=>s);
+  if(!labels.length) return;
+  labels.forEach((lbl,i)=>{ if(i<sampleGroups.length) sampleGroups[i].label=lbl; });
+  document.getElementById('label-paste').value='';
+  renderAllWells(); updateSgRows();
+}
+
+// ── Parse data ────────────────────────────────────────────────────────────────
+function parseData(){
+  const raw=document.getElementById('paste-area').value.trim(); if(!raw) return;
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
+  const dataRows=[];
+  for(const line of lines){
+    const parts=line.split('\t');
+    const nums=parts.reduce((acc,p)=>{ const v=parseFloat(p); if(!isNaN(v)&&p.trim()!==''&&acc.length<12) acc.push(v); return acc; },[]);
+    if(nums.length>=12) dataRows.push(nums);
+  }
+  const use=dataRows.slice(-8);
+  if(use.length===0){ alert('Could not find 8 rows of 12 numeric values. Check data format.'); return; }
+  use.forEach((row,ri)=>row.forEach((val,ci)=>{ plateData[wkey(ROWS[ri],COLS[ci])]=val; }));
+  renderAllWells();
+}
+
+// ── Example data ──────────────────────────────────────────────────────────────
+function loadExample(){
+  const raw=[[.064,.089,.228,.378,.662,.911,1.178,1.590,2.040,.044,.045,.045],[.07,.090,.222,.357,.632,.912,1.179,1.618,1.935,.044,.045,.044],[1.035,.761,.713,.950,.746,.506,.929,.747,.855,.645,.604,.621],[1.024,.769,.712,.898,.766,.501,.942,.750,.874,.649,.594,.635],[1.065,.762,.725,.908,.760,.508,.946,.747,.867,.661,.627,.646],[.335,.544,.460,.197,.369,.391,.058,.058,.067,.045,.045,.045],[.331,.544,.471,.197,.370,.386,.059,.058,.044,.044,.045,.044],[.351,.580,.489,.205,.387,.398,.059,.059,.054,.045,.045,.045]];
+  raw.forEach((row,ri)=>row.forEach((val,ci)=>{ plateData[wkey(ROWS[ri],COLS[ci])]=val; }));
+  wellType={}; wellGroup={}; sampleGroups=[]; nextGroupId=0; flaggedWells=new Set(); stdAmounts={};
+
+  // Blanks
+  ['A1','B1'].forEach(k=>wellType[k]='blank');
+  ROWS.forEach(r=>[10,11,12].forEach(c=>wellType[wkey(r,c)]='blank'));
+
+  // Standards cols 2-9 rows A&B
+  ['A','B'].forEach(r=>[2,3,4,5,6,7,8,9].forEach(c=>wellType[wkey(r,c)]='std'));
+  stdAmounts={2:0,3:125,4:250,5:500,6:750,7:1000,8:1500,9:2000};
+  setStdDir('col'); // ensure col mode matches example layout
+
+  // Sample group 1: rows C,D,E cols 1-9
+  const g1color=SAMPLE_COLORS[nextGroupId%SAMPLE_COLORS.length];
+  const g1wells=[];
+  [1,2,3,4,5,6,7,8,9].forEach(c=>['C','D','E'].forEach(r=>{ const k=wkey(r,c); wellType[k]='sample'; wellGroup[k]=nextGroupId; g1wells.push(k); }));
+  sampleGroups.push({id:nextGroupId,label:'Rapamycin',wells:g1wells,color:g1color});
+  nextGroupId++;
+
+  // Sample group 2: rows F,G,H cols 1-9
+  const g2color=SAMPLE_COLORS[nextGroupId%SAMPLE_COLORS.length];
+  const g2wells=[];
+  [1,2,3,4,5,6,7,8,9].forEach(c=>['F','G','H'].forEach(r=>{ const k=wkey(r,c); wellType[k]='sample'; wellGroup[k]=nextGroupId; g2wells.push(k); }));
+  sampleGroups.push({id:nextGroupId,label:'Control',wells:g2wells,color:g2color});
+  nextGroupId++;
+
+  selSet=new Set(); updateSelCount();
+  renderAllWells(); updateStdRows(); updateSgRows(); runAnalysis();
+}
+
+// ── Run analysis ──────────────────────────────────────────────────────────────
+function runAnalysis(){
+  const fitType=document.getElementById('fit-type').value;
+  const dilution=parseFloat(document.getElementById('dilution').value)||1;
+  const cvThresh=parseFloat(document.getElementById('cv-thresh').value)||10;
+
+  // Blank mean
+  const blankVals=ROWS.flatMap(r=>COLS.map(c=>wkey(r,c))).filter(k=>wellType[k]==='blank'&&plateData[k]!==undefined).map(k=>plateData[k]);
+  const blankMean=blankVals.length?blankVals.reduce((a,b)=>a+b,0)/blankVals.length:0;
+
+  // Std points
+  const stdGroups=getStdGroups();
+  const xs=[],ys=[];
+  stdGroups.forEach(({key,wells})=>{
+    const amt=stdAmounts[key]; if(amt===undefined||isNaN(amt)) return;
+    const vals=wells.filter(k=>wellType[k]==='std'&&plateData[k]!==undefined).map(k=>plateData[k]-blankMean);
+    if(!vals.length) return;
+    xs.push(+amt); ys.push(vals.reduce((a,b)=>a+b,0)/vals.length);
+  });
+
+  if(xs.length<2){
+    document.getElementById('res-body').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Assign Std wells, enter amounts, then click ▶ Run.</td></tr>';
+    return;
+  }
+
+  const fit=fitType==='poly2'?poly2(xs,ys):fitType==='3pl'?sigmoidalFit(xs,ys,false):fitType==='4pl'?sigmoidalFit(xs,ys,true):linReg(xs,ys);
+  drawCurve(xs,ys,fit);
+
+  // Stats
+  let sh=`<div class="stat"><div class="sv">${fit.r2.toFixed(4)}</div><div class="sl">R²</div></div>`;
+  if(fitType==='linear') sh+=`<div class="stat"><div class="sv">${fit.m.toFixed(4)}</div><div class="sl">Slope</div></div><div class="stat"><div class="sv">${fit.b.toFixed(4)}</div><div class="sl">Intercept</div></div>`;
+  if(fitType==='3pl'||fitType==='4pl'){
+    if(fitType==='4pl') sh+=`<div class="stat"><div class="sv">${fit.a.toFixed(3)}</div><div class="sl">Bottom (a)</div></div>`;
+    sh+=`<div class="stat"><div class="sv">${fit.d.toFixed(3)}</div><div class="sl">Top (d)</div></div>`;
+    sh+=`<div class="stat"><div class="sv">${fit.c.toFixed(1)}</div><div class="sl">EC50 (c)</div></div>`;
+    sh+=`<div class="stat"><div class="sv">${fit.b.toFixed(3)}</div><div class="sl">Hill (b)</div></div>`;
+  }
+  sh+=`<div class="stat"><div class="sv">${blankMean.toFixed(4)}</div><div class="sl">Blank OD</div></div>`;
+  document.getElementById('curve-stats').innerHTML=sh;
+
+  // Results
+  flaggedWells=new Set();
+  const tbody=document.getElementById('res-body'); tbody.innerHTML='';
+  const flags=[];
+
+  sampleGroups.forEach(g=>{
+    const active=g.wells.filter(k=>wellType[k]!=='exclude'&&plateData[k]!==undefined);
+    if(!active.length) return;
+    const concs=active.map(k=>fit.invert((plateData[k]-blankMean))*dilution);
+    const valid=concs.filter(v=>!isNaN(v)&&isFinite(v)&&v>=0);
+    if(!valid.length) return;
+    const mean=valid.reduce((a,b)=>a+b,0)/valid.length;
+    const std=valid.length>1?Math.sqrt(valid.reduce((s,v)=>s+(v-mean)**2,0)/(valid.length-1)):0;
+    const sem=valid.length>1?std/Math.sqrt(valid.length):0;
+    const cv=mean>0?std/mean*100:0;
+    const absMean=active.map(k=>plateData[k]-blankMean).reduce((a,b)=>a+b,0)/active.length;
+    const isFlagged=cv>cvThresh&&valid.length>1;
+    if(isFlagged){ active.forEach(k=>flaggedWells.add(k)); flags.push({label:g.label,cv:cv.toFixed(1),wells:active.join(', ')}); }
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:600;color:${g.color}">${g.label}</td>
+      <td>${active.length}</td>
+      <td>${absMean.toFixed(4)}</td>
+      <td style="font-weight:600;color:${isFlagged?'var(--orange)':'var(--text)'}">${mean.toFixed(2)}</td>
+      <td>${sem.toFixed(2)}</td>
+      <td style="color:${isFlagged?'var(--orange)':'var(--green)'}">${isNaN(cv)||!isFinite(cv)?'—':cv.toFixed(1)}</td>
+      <td>${isFlagged?'<span class="bwarn">⚠ High CV</span>':'<span class="bok">✓ OK</span>'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  renderAllWells();
+
+  let fh='';
+  flags.forEach(f=>{ fh+=`<div class="notice nw">⚠ <b>${f.label}</b>: CV=${f.cv}% (${f.wells}). Consider repeating or use Exclude mode to remove outliers.</div>`; });
+  if(!flags.length&&sampleGroups.length>0) fh=`<div class="notice ns">✓ All groups within ${cvThresh}% CV threshold.</div>`;
+  document.getElementById('flags-out').innerHTML=fh;
+}
+
+// ── Draw curve ────────────────────────────────────────────────────────────────
+function drawCurve(xs,ys,fit){
+  const cv=document.getElementById('curve-canvas');
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.parentElement.clientWidth-24,H=230;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const pad={l:56,r:16,t:14,b:36};
+  const pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const maxX=Math.max(...xs)*1.08;
+  const allY=[...ys,...Array.from({length:60},(_,i)=>fit.predict(i/59*maxX)).filter(v=>isFinite(v))];
+  const minY=Math.min(0,...allY),maxY=Math.max(...allY)*1.06;
+  const tx=x=>pad.l+(x/maxX)*pw,ty=y=>pad.t+ph-((y-minY)/(maxY-minY))*ph;
+
+  ctx.fillStyle='#161b22'; ctx.fillRect(0,0,W,H);
+
+  // grid lines
+  ctx.strokeStyle='rgba(48,54,61,.55)'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+i*(ph/4);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();
+    ctx.fillStyle='#8b949e';ctx.font='10px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText((maxY-i*(maxY-minY)/4).toFixed(3),pad.l-5,y+4);
+  }
+  for(let i=0;i<=4;i++){
+    const x=pad.l+i*(pw/4);
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();
+    ctx.fillStyle='#8b949e';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText((i*(maxX/4)).toFixed(0),x,pad.t+ph+14);
+  }
+
+  // fit line
+  ctx.beginPath();
+  let first=true;
+  for(let i=0;i<=80;i++){
+    const x=i/80*maxX,y=fit.predict(x);
+    if(!isFinite(y)) continue;
+    first?(ctx.moveTo(tx(x),ty(y)),first=false):ctx.lineTo(tx(x),ty(y));
+  }
+  ctx.strokeStyle='rgba(88,166,255,.75)';ctx.lineWidth=2;ctx.stroke();
+
+  // data points
+  xs.forEach((x,i)=>{
+    ctx.beginPath();ctx.arc(tx(x),ty(ys[i]),5,0,Math.PI*2);
+    ctx.fillStyle='#58a6ff';ctx.fill();
+    ctx.strokeStyle='#0d1117';ctx.lineWidth=1.5;ctx.stroke();
+  });
+
+  // axis labels
+  ctx.fillStyle='#8b949e';ctx.font='11px IBM Plex Sans';ctx.textAlign='center';
+  ctx.fillText('Amount (µg/mL)',pad.l+pw/2,H-3);
+  ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText('Absorbance (blank-corrected)',0,0);ctx.restore();
+}
+
+// ── Clear / Export ────────────────────────────────────────────────────────────
+function clearAll(){
+  wellType={}; wellGroup={}; sampleGroups=[]; nextGroupId=0; selSet=new Set(); flaggedWells=new Set(); stdAmounts={};
+  updateSelCount(); renderAllWells(); updateStdRows(); updateSgRows();
+  document.getElementById('res-body').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Assign wells and run analysis.</td></tr>';
+  document.getElementById('flags-out').innerHTML='';
+  document.getElementById('curve-stats').innerHTML='';
+  const cv=document.getElementById('curve-canvas'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+}
+
+function exportCSV(){
+  const rows=[['Sample','n','Abs_mean_corrected','Conc_ug_mL','SEM','CV_pct','Status']];
+  document.querySelectorAll('#res-body tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(td=>'"'+td.innerText.trim().replace(/"/g,'\'\'')+'"');
+    if(cells.length>1) rows.push(cells);
+  });
+  if(rows.length<2){ alert('No results to export — run analysis first.'); return; }
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='bca_results.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); },100);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildPlate();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Western / Laemmli Prep</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--orange:#f0883e;--red:#f85149;--purple:#a371f7;
+  --muted:#8b949e;--text:#e6edf3;--text2:#c9d1d9;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{font-family:var(--mono);font-weight:600;color:var(--accent);font-size:13px}
+.badge{background:rgba(163,113,247,.15);color:var(--purple);border:1px solid rgba(163,113,247,.3);padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--mono)}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:250px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px 14px 40px;display:flex;flex-direction:column;gap:12px}
+.main{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:visible}
+.card-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-body{padding:12px}
+
+label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.f{margin-bottom:10px}.f:last-child{margin-bottom:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--accent);color:#0d1117}.btn-p:hover{background:#79c0ff}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.btn-d{background:rgba(248,81,73,.1);color:var(--red);border:1px solid rgba(248,81,73,.25)}.btn-d:hover{background:rgba(248,81,73,.2)}
+.sep{height:1px;background:var(--border);margin:8px 0}
+.flex{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+
+/* Param grid in sidebar */
+.param-grid{display:grid;grid-template-columns:1fr;gap:0}
+.param-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(48,54,61,.5)}
+.param-row:last-child{border-bottom:none}
+.param-lbl{font-size:11px;color:var(--muted)}
+.param-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent)}
+
+/* Main sample table */
+.stbl{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono)}
+.stbl th{background:var(--surface2);color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:7px 8px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0}
+.stbl td{padding:4px 5px;border-bottom:1px solid rgba(48,54,61,.35);vertical-align:middle}
+.stbl tr:last-child td{border-bottom:none}
+.stbl tr:hover td{background:rgba(255,255,255,.013)}
+.stbl input{padding:3px 5px;font-size:11px}
+.stbl .num{text-align:right;padding-right:8px}
+
+/* Column colour coding matching template */
+.col-input{color:var(--text2)}
+.col-calc{color:var(--accent)}
+.col-ok{color:var(--green);font-weight:600}
+.col-warn{color:var(--orange);font-weight:600}
+.col-err{color:var(--red);font-weight:600}
+
+.flag{font-size:9px;padding:1px 6px;border-radius:3px;white-space:nowrap}
+.flag-ok{background:rgba(63,185,80,.12);color:var(--green)}
+.flag-warn{background:rgba(240,136,62,.15);color:var(--orange)}
+.flag-err{background:rgba(248,81,73,.12);color:var(--red)}
+
+.notice{padding:8px 12px;border-radius:6px;font-size:11px;margin-bottom:6px;line-height:1.5}
+.ni{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--accent)}
+.nw{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange)}
+.ns{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+.nr{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);color:var(--red)}
+
+.stat-row{display:flex;gap:8px;flex-wrap:wrap}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;min-width:80px}
+.sv{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent)}
+.sl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:1px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⬡ LAB·TOOLS</div>
+  <div class="badge">Western / Laemmli Prep</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-s" onclick="exportCSV()">⬇ Export CSV</button>
+</header>
+
+<div class="layout">
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+
+  <div class="card">
+    <div class="card-head">⚙ Parameters</div>
+    <div class="card-body">
+      <div class="f">
+        <label>Sample Dilution Factor (DF)</label>
+        <input type="number" id="p-df" value="3" min="1" step="0.1" oninput="recalc()"
+          title="Factor used when diluting samples for BCA — applied to reverse back to stock conc">
+      </div>
+      <div class="f">
+        <label>Protein per well <span style="text-transform:none">(µg)</span></label>
+        <input type="number" id="p-prot" value="15" min="1" max="200" step="1" oninput="recalc()">
+      </div>
+      <div class="f">
+        <label>Volume per well <span style="text-transform:none">(µL)</span></label>
+        <input type="number" id="p-wellvol" value="15" min="1" max="50" step="1" oninput="recalc()"
+          title="Volume loaded into each gel well">
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Number of replicates</label>
+        <input type="number" id="p-reps" value="1" min="1" max="10" step="1" oninput="recalc()"
+          title="Number of times each sample is loaded — total volume = reps × well vol + buffer">
+      </div>
+      <div class="f">
+        <label>Gel format</label>
+        <select id="p-gel" onchange="recalc()">
+          <option value="18">Criterion 18-well (30 µL max)</option>
+          <option value="26">Criterion 26-well (15 µL max)</option>
+        </select>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Laemmli buffer</label>
+        <select id="p-buf" onchange="recalc()">
+          <option value="6">6× (add 1 part per 5 sample)</option>
+          <option value="4">4× (add 1 part per 3 sample)</option>
+          <option value="2">2× (add 1:1)</option>
+        </select>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Extra overage volume <span style="text-transform:none">(µL)</span></label>
+        <input type="number" id="p-buffer" value="5" min="0" max="50" step="1" oninput="recalc()"
+          title="Extra volume added per sample prep to account for pipetting loss">
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">e.g. 3 reps × 15 µL + 5 µL = 50 µL total</div>
+      </div>
+      <div class="sep"></div>
+      <div class="f">
+        <label>Default max lysate vol <span style="text-transform:none">(µL)</span></label>
+        <input type="number" id="p-maxvol" value="" min="0" step="1" oninput="applyDefaultMaxVol()"
+          placeholder="blank = unlimited"
+          title="Sets Max Vol for all rows that have no value entered. Per-row values still override this.">
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Applied to rows with no Max Vol set. Override per-row.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">📥 Import from BCA Tab</div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.55">
+        Copy the full results table (header + rows) from the BCA tab and paste below. Uses columns <span style="color:var(--accent)">Sample</span> and <span style="color:var(--accent)">Conc (µg/mL)</span> — matches the BCA tab export directly.
+      </div>
+      <textarea id="bca-paste" rows="5" style="font-size:11px;margin-bottom:6px"
+        placeholder='Paste BCA export here&#10;&#10;e.g.&#10;"Sample","n","Abs (corr.)","Conc µg/mL",...&#10;"Control",3,0.412,850.2,...'></textarea>
+      <button class="btn btn-p" style="width:100%;margin-bottom:6px" onclick="importBCA()">↳ Import</button>
+      <div class="flex">
+        <button class="btn btn-s grow" onclick="addRow()">+ Add row</button>
+        <button class="btn btn-d grow" onclick="clearSamples()">✕ Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">📊 Summary</div>
+    <div class="card-body">
+      <div class="stat-row" id="summary-stats" style="margin-bottom:10px"></div>
+      <div id="summary-notices"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- Derived params display -->
+  <div class="card">
+    <div class="card-head">🔢 Calculated per Sample
+      <span style="flex:1"></span>
+      <span id="gel-label" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text2)"></span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px;font-family:var(--mono)">
+        <div><span style="color:var(--muted)" id="d-totalvol-lbl">Total vol (reps × well vol + pipetting buffer):</span> <span id="d-totalvol" style="color:var(--accent);font-weight:600"></span></div>
+        <div><span style="color:var(--muted)">Laemmli buffer per prep:</span> <span id="d-bufvol" style="color:var(--accent);font-weight:600"></span></div>
+        <div><span style="color:var(--muted)">Sample zone (total − buffer):</span> <span id="d-sampzone" style="color:var(--accent);font-weight:600"></span></div>
+        <div><span style="color:var(--muted)">Max well vol:</span> <span id="d-maxwell" style="color:var(--accent);font-weight:600"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sample prep table -->
+  <div class="card" style="flex:1;min-height:0;overflow:hidden">
+    <div class="card-head">🧪 Sample Prep Table
+      <span style="flex:1"></span>
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--muted)">
+        Max Vol = total lysate available · leave blank = unlimited
+      </span>
+    </div>
+    <div style="overflow:auto;max-height:calc(100vh - 420px)">
+      <table class="stbl" id="stbl">
+        <thead>
+          <tr>
+            <th style="min-width:120px">Sample</th>
+            <th class="num" title="As measured by BCA (before dilution factor) — paste directly from BCA tab export">BCA Conc<br><span style="text-transform:none">(µg/mL)</span></th>
+            <th class="num" title="BCA conc × dilution factor = stock concentration">Conc × DF<br><span style="text-transform:none">(µg/mL)</span></th>
+            <th class="num" title="Stock concentration in µg/µL">Conc × DF<br><span style="text-transform:none">(µg/µL)</span></th>
+            <th class="num" title="Max lysate volume available. Leave blank to use the default from sidebar, or enter a per-sample override.">Max Vol<br>(µL) <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:8px">↑ sidebar default</span></th>
+            <th class="num" style="color:var(--accent)" title="Volume of lysate to add">Vol Sample<br><span style="text-transform:none">(µL)</span></th>
+            <th class="num" title="Make up to sample zone with RIPA/lysis buffer">Vol RIPA<br><span style="text-transform:none">(µL)</span></th>
+            <th class="num" style="color:var(--accent)" title="Volume of Laemmli loading buffer to add">Laemmli<br><span style="text-transform:none">(µL)</span></th>
+            <th class="num" style="color:var(--accent)" title="Total volume across all reps">Total Vol<br><span style="text-transform:none">(µL)</span></th>
+            <th style="min-width:110px">Status</th>
+            <th style="width:22px"></th>
+          </tr>
+        </thead>
+        <tbody id="stbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let samples = [];   // {id, name, conc, maxVol}
+let nextId = 0;
+
+// ── Param helpers ─────────────────────────────────────────────────────────────
+const pv = id => parseFloat(document.getElementById(id).value) || 0;
+const pi = id => parseInt(document.getElementById(id).value) || 0;
+
+function params() {
+  const df      = pv('p-df')     || 1;
+  const protUg  = pv('p-prot')   || 15;   // µg per well
+  const wellVol = pv('p-wellvol')|| 15;   // µL per well
+  const reps    = pi('p-reps')   || 1;
+  const bufX    = parseInt(document.getElementById('p-buf').value) || 6;
+  const gelMax  = parseInt(document.getElementById('p-gel').value) || 18; // max well vol
+
+  // Laemmli: 1 part buffer per (bufX-1) parts sample — fixed ratio applied to total well vol
+  // bufVol per well = wellVol / bufX  (so total = lysate + diluent + buffer = wellVol)
+  const bufVolPerWell = wellVol / bufX;
+  const sampleZonePerWell = wellVol - bufVolPerWell;   // lysate + diluent per well
+
+  // Total across all reps
+  const totalVol    = wellVol * reps + bufVolPerWell * reps;  // actually: reps * wellVol but buffer included
+  // Simpler: total = reps * wellVol (buffer is part of that volume)
+  // Let's recalc cleanly:
+  // Each well = [lysate + diluent] + [buffer] = wellVol
+  // Total prep = reps wells worth
+  const totalPrepVol    = reps * wellVol;              // µL total
+  const totalBufVol     = reps * bufVolPerWell;        // µL Laemmli total
+  const totalSampleZone = reps * sampleZonePerWell;    // µL for lysate + diluent
+
+  const pipBuffer = pv('p-buffer') || 0;  // extra µL per sample for pipetting loss
+
+  // Recalc total with pipetting buffer
+  const totalPrepVolWithBuffer  = totalPrepVol + pipBuffer;
+  const totalBufVolWithBuffer   = totalBufVol + (pipBuffer / bufX);
+  const totalSampleZoneWithBuffer = totalPrepVolWithBuffer - totalBufVolWithBuffer;
+
+  const defaultMaxVolRaw = document.getElementById('p-maxvol').value;
+  const defaultMaxVol = defaultMaxVolRaw === '' ? Infinity : parseFloat(defaultMaxVolRaw);
+
+  return { df, protUg, wellVol, reps, bufX, gelMax, bufVolPerWell, sampleZonePerWell, defaultMaxVol,
+           totalPrepVol: totalPrepVolWithBuffer,
+           totalBufVol: totalBufVolWithBuffer,
+           totalSampleZone: totalSampleZoneWithBuffer,
+           pipBuffer };
+}
+
+// ── Per-sample calc ────────────────────────────────────────────────────────────
+function calcRow(s, p) {
+  const bcaConc = +s.conc;
+  if (!bcaConc || bcaConc <= 0) return null;
+
+  // Input is µg/mL (same units as BCA tab output)
+  const concXdf_mL = bcaConc * p.df;          // µg/mL after DF correction
+  const concXdf_uL = concXdf_mL / 1000;       // µg/µL
+
+  // Volume of lysate needed for target load across all reps
+  const lysateNeeded = (p.protUg * p.reps) / concXdf_uL;  // µL
+
+  const maxVol = (s.maxVol === '' || s.maxVol === undefined) ? p.defaultMaxVol : +s.maxVol;
+
+  let volSample = lysateNeeded;
+  let flags = [];
+
+  // Does it fit in the sample zone?
+  if (lysateNeeded > p.totalSampleZone) {
+    volSample = p.totalSampleZone;  // fill the zone
+    flags.push('low-conc');
+  }
+
+  // Is there enough sample available?
+  if (volSample > maxVol) {
+    volSample = maxVol;
+    flags = ['insufficient'];
+  }
+
+  const actualLoadUg = volSample * concXdf_uL;  // actual µg loaded
+  const volDiluent   = Math.max(0, p.totalSampleZone - volSample);
+  const totalVol     = volSample + volDiluent + p.totalBufVol;
+
+  return {
+    bcaConc, concXdf_mL, concXdf_uL,
+    volSample, volDiluent,
+    bufVol: p.totalBufVol,
+    totalVol, actualLoadUg,
+    effectiveMaxVol: maxVol === Infinity ? 9999 : maxVol,
+    flags,
+    ok: flags.length === 0
+  };
+}
+
+// ── Render table ───────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('stbl-body');
+  tbody.innerHTML = '';
+  samples.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${s.name}" placeholder="Sample name" oninput="setField(${s.id},'name',this.value)" style="width:115px"></td>
+      <td class="num"><input type="number" value="${s.conc === '' ? '' : s.conc}" placeholder="µg/mL" min="0" step="any" oninput="setField(${s.id},'conc',this.value)" style="width:72px"></td>
+      <td class="num col-calc" id="r-cdf-${s.id}">—</td>
+      <td class="num col-calc" id="r-cdfuL-${s.id}">—</td>
+      <td class="num"><input type="number" value="${s.maxVol === '' ? '' : s.maxVol}" placeholder="∞" min="0" step="any" oninput="setField(${s.id},'maxVol',this.value)" style="width:60px" title="Total lysate available (µL)"></td>
+      <td class="num col-ok" id="r-vsamp-${s.id}">—</td>
+      <td class="num" id="r-vdil-${s.id}">—</td>
+      <td class="num col-ok" id="r-vbuf-${s.id}">—</td>
+      <td class="num col-ok" id="r-vtot-${s.id}">—</td>
+      <td id="r-status-${s.id}">—</td>
+      <td><button onclick="removeRow(${s.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function fmt(v, dp = 2) {
+  return (Math.round(v * 100) / 100).toFixed(dp);
+}
+
+// ── Recalculate all rows ───────────────────────────────────────────────────────
+function recalc() {
+  const p = params();
+
+  // Update derived-params bar
+  const pipStr = p.pipBuffer > 0 ? ` (${p.reps} × ${p.wellVol} + ${p.pipBuffer} µL buffer)` : ` (${p.reps} × ${p.wellVol} µL)`;
+  document.getElementById('d-totalvol').textContent  = fmt(p.totalPrepVol, 1) + ' µL';
+  document.getElementById('d-totalvol-lbl').textContent = 'Total vol' + pipStr + ':';
+  document.getElementById('d-bufvol').textContent    = fmt(p.totalBufVol, 1) + ' µL';
+  document.getElementById('d-sampzone').textContent  = fmt(p.totalSampleZone, 1) + ' µL';
+  document.getElementById('d-maxwell').textContent   = p.gelMax + ' µL';
+
+  const gelName = p.gelMax === 18 ? 'Criterion 18-well' : 'Criterion 26-well';
+  document.getElementById('gel-label').textContent   = `${gelName} · ${p.bufX}× Laemmli · ${p.reps} rep${p.reps > 1 ? 's' : ''}${p.pipBuffer > 0 ? ` · +${p.pipBuffer} µL pipetting buffer` : ''}`;
+
+  let flagCount = { low: 0, insuf: 0 };
+  let usedN = 0;
+
+  samples.forEach(s => {
+    const res = calcRow(s, p);
+
+    const set = (id, val, cls = '') => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = val;
+      el.className = ['num', cls].filter(Boolean).join(' ');
+    };
+
+    if (!res) {
+      ['cdf','cdfuL','vsamp','vdil','vbuf','vtot'].forEach(f => set(`r-${f}-${s.id}`, '—'));
+      const st = document.getElementById(`r-status-${s.id}`);
+      if (st) st.innerHTML = '<span style="color:var(--muted);font-size:10px">Enter conc</span>';
+      return;
+    }
+
+    usedN++;
+    set(`r-cdf-${s.id}`,    fmt(res.concXdf_mL, 1),  'num col-calc');
+    set(`r-cdfuL-${s.id}`,  fmt(res.concXdf_uL, 4),  'num col-calc');
+    set(`r-vsamp-${s.id}`,  fmt(res.volSample, 1),    res.ok ? 'num col-ok' : 'num col-warn');
+    set(`r-vdil-${s.id}`,   fmt(res.volDiluent, 1),   'num');
+    set(`r-vbuf-${s.id}`,   fmt(res.bufVol, 1),       'num col-ok');
+    set(`r-vtot-${s.id}`,   fmt(res.totalVol, 1),     res.ok ? 'num col-ok' : 'num col-warn');
+
+    const stEl = document.getElementById(`r-status-${s.id}`);
+    if (stEl) {
+      if (res.flags.includes('insufficient')) {
+        stEl.innerHTML = `<span class="flag flag-err">⚠ Insufficient<br><small style="font-size:9px">max ${fmt(res.effectiveMaxVol,1)} µL · loads ${fmt(res.actualLoadUg,1)} µg</small></span>`;
+        flagCount.insuf++;
+      } else if (res.flags.includes('low-conc')) {
+        stEl.innerHTML = `<span class="flag flag-warn">⚠ Under-loaded<br><small style="font-size:9px">loads ${fmt(res.actualLoadUg,1)} µg</small></span>`;
+        flagCount.low++;
+      } else {
+        stEl.innerHTML = `<span class="flag flag-ok">✓ ${fmt(res.actualLoadUg,1)} µg</span>`;
+      }
+    }
+  });
+
+  // Summary stats
+  document.getElementById('summary-stats').innerHTML = `
+    <div class="stat"><div class="sv">${usedN}</div><div class="sl">Samples</div></div>
+    <div class="stat"><div class="sv">${p.reps}</div><div class="sl">Reps</div></div>
+    <div class="stat"><div class="sv">${p.protUg} µg</div><div class="sl">Target</div></div>
+    <div class="stat"><div class="sv">${p.df}×</div><div class="sl">DF</div></div>`;
+
+  let notices = '';
+  if (flagCount.insuf) notices += `<div class="notice nr">⚠ ${flagCount.insuf} sample${flagCount.insuf > 1 ? 's' : ''} have insufficient volume — actual load will be lower.</div>`;
+  if (flagCount.low)   notices += `<div class="notice nw">⚠ ${flagCount.low} sample${flagCount.low > 1 ? 's' : ''} are under-loaded due to low concentration.</div>`;
+  if (!notices && usedN > 0) notices = `<div class="notice ns">✓ All samples on target.</div>`;
+  document.getElementById('summary-notices').innerHTML = notices;
+}
+
+// ── Row management ────────────────────────────────────────────────────────────
+function addRow(name = '', conc = '', maxVol = '') {
+  samples.push({ id: nextId++, name, conc: conc === '' ? '' : +conc, maxVol: maxVol === '' ? '' : +maxVol });
+  renderTable(); recalc();
+}
+
+function removeRow(id) {
+  samples = samples.filter(s => s.id !== id);
+  renderTable(); recalc();
+}
+
+function clearSamples() {
+  if (samples.length && !confirm('Clear all samples from the prep table?')) return;
+  samples = []; nextId = 0;
+  renderTable(); recalc();
+}
+
+function setField(id, field, val) {
+  const s = samples.find(s => s.id === id);
+  if (!s) return;
+  if (field === 'name') s[field] = val;
+  else s[field] = val === '' ? '' : +val;
+  recalc();
+}
+
+// ── Apply default max vol to blank rows ───────────────────────────────────────
+function applyDefaultMaxVol() {
+  // Just recalc — calcRow already reads p.defaultMaxVol for blank rows
+  recalc();
+}
+
+// ── Import BCA CSV ────────────────────────────────────────────────────────────
+// BCA export header: "Sample","n","Abs (corr.)","Conc µg/mL","±SEM","CV%","Status"
+// col 0 = Sample, col 3 = Conc µg/mL
+function importBCA() {
+  const raw = document.getElementById('bca-paste').value.trim();
+  if (!raw) return;
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+  if (!lines.length) return;
+
+  // Detect header
+  const firstCols = lines[0].split(/,|\t/).map(s => s.replace(/"/g, '').trim().toLowerCase());
+  const isHeader = firstCols.some(c => c === 'sample' || c.includes('conc'));
+
+  let colSample = 0, colConc = 3;
+  let dataStart = 0;
+
+  if (isHeader) {
+    dataStart = 1;
+    colSample = firstCols.findIndex(c => c === 'sample' || c.startsWith('sample'));
+    colConc   = firstCols.findIndex(c => c.includes('conc') || c.includes('µg') || c.includes('ug'));
+    if (colSample < 0) colSample = 0;
+    if (colConc   < 0) colConc   = 3;
+  }
+
+  let added = 0;
+  lines.slice(dataStart).forEach(line => {
+    const parts = line.split(/,|\t/).map(p => p.replace(/"/g, '').trim());
+    if (parts.length < 2) return;
+    const name = parts[colSample];
+    if (!name || name.toLowerCase() === 'sample') return;
+    const conc = parseFloat(parts[colConc]);
+    if (isNaN(conc) || conc <= 0) return;
+    samples.push({ id: nextId++, name, conc, maxVol: '' });
+    added++;
+  });
+
+  document.getElementById('bca-paste').value = '';
+  renderTable(); recalc();
+
+  if (added === 0) alert('No valid rows found.\n\nExpected format: copy the full results table (including the header row) from the BCA tab.');
+}
+
+// ── Export CSV ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const p = params();
+  const rows = [['Sample','BCA_Conc_ugmL','Conc_x_DF_ugmL','Conc_x_DF_uguL','MaxVol_uL','VolSample_uL','VolDiluent_uL','Laemmli_uL','TotalVol_uL','ActualLoad_ug','Status']];
+  samples.forEach(s => {
+    const res = calcRow(s, p);
+    rows.push([
+      `"${s.name}"`,
+      s.conc === '' ? '' : s.conc,
+      res ? fmt(res.concXdf_mL, 2) : '',
+      res ? fmt(res.concXdf_uL, 4) : '',
+      s.maxVol === '' ? '∞' : s.maxVol,
+      res ? fmt(res.volSample) : '',
+      res ? fmt(res.volDiluent) : '',
+      res ? fmt(res.bufVol) : '',
+      res ? fmt(res.totalVol) : '',
+      res ? fmt(res.actualLoadUg) : '',
+      res ? (res.flags.length ? res.flags.join(';') : 'ok') : 'no-conc'
+    ]);
+  });
+  if (rows.length < 2) { alert('No samples to export.'); return; }
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'western_prep.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+['Sample 1', 'Sample 2', 'Sample 3'].forEach(n => addRow(n, '', ''));
+recalc();
+</script>
+</body>
+</html>
