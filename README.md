@@ -2,7 +2,7 @@
 
 A suite of interactive calculators and data tools for everyday wet-lab work. Everything runs in the browser: there is nothing to install, no server, and no data leaves your machine.
 
-**Live site:** [https://<username>.github.io/<repo-name>/](https://sarahehancock.github.io/lab-tools/)
+**Live site:** [https://sarahehancock.github.io/lab-tools/](https://sarahehancock.github.io/lab-tools/)
 
 ## Tools
 
