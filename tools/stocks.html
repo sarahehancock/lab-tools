@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock & Dilution Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--orange:#f0883e;--red:#f85149;--purple:#a371f7;--yellow:#e3b341;
+  --muted:#8b949e;--text:#e6edf3;--text2:#c9d1d9;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo{font-family:var(--mono);font-weight:600;color:var(--accent);font-size:13px}
+.badge{background:rgba(227,179,65,.12);color:var(--yellow);border:1px solid rgba(227,179,65,.3);padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--mono)}
+.tabs{display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);padding:0 16px;flex-shrink:0}
+.tab{padding:10px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none;flex:1;overflow-y:auto;padding:18px 20px;gap:16px}
+.tab-content.active{display:flex;flex-direction:column}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.ch{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px;border-radius:8px 8px 0 0;flex-wrap:wrap}
+.cb{padding:14px}
+label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.f{margin-bottom:12px}.f:last-child{margin-bottom:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--accent);color:#0d1117}.btn-p:hover{background:#79c0ff}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.btn-d{background:rgba(248,81,73,.1);color:var(--red);border:1px solid rgba(248,81,73,.25)}.btn-d:hover{background:rgba(248,81,73,.2)}
+.btn-y{background:rgba(227,179,65,.12);color:var(--yellow);border:1px solid rgba(227,179,65,.3)}.btn-y:hover{background:rgba(227,179,65,.2)}
+.sep{height:1px;background:var(--border);margin:10px 0}
+.flex{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+.notice{padding:9px 12px;border-radius:6px;font-size:11px;line-height:1.6;margin-bottom:8px}
+.ni{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--accent)}
+.nw{background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.25);color:var(--orange)}
+.ns{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+.nr{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);color:var(--red)}
+.result-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.result-val{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent)}
+.result-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+/* unit combo */
+.unit-combo{display:flex;gap:0}
+.unit-combo input{border-radius:5px 0 0 5px;flex:1}
+.unit-combo select{border-radius:0 5px 5px 0;border-left:none;width:80px;flex-shrink:0}
+.unit-combo select:focus{border-left:none}
+
+/* Library table */
+table.lib{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono)}
+table.lib th{background:var(--surface2);color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+table.lib td{padding:6px 10px;border-bottom:1px solid rgba(48,54,61,.35);vertical-align:middle}
+table.lib tr:last-child td{border-bottom:none}
+table.lib tr:hover td{background:rgba(255,255,255,.02);cursor:pointer}
+.lib-name{font-weight:600;color:var(--text)}
+.lib-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--mono);background:rgba(88,166,255,.12);color:var(--accent)}
+.dmso-ok{color:var(--green)}
+.dmso-warn{color:var(--orange)}
+.dmso-err{color:var(--red);font-weight:600}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⬡ LAB·TOOLS</div>
+  <div class="badge">Stock & Dilution</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-s" style="font-size:11px" onclick="exportLibraryMD()">⬇ Export Library MD</button>
+  <label class="btn btn-s" style="font-size:11px;cursor:pointer">⬆ Import CSV<input type="file" accept=".csv" style="display:none" onchange="importLibraryCSV(this)"></label>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('stock')">⚗ Stock Prep</div>
+  <div class="tab" onclick="switchTab('dilution')">🧪 Working Dilution</div>
+  <div class="tab" onclick="switchTab('library')">📚 Compound Library</div>
+</div>
+
+<!-- ── TAB 1: Stock Prep ── -->
+<div class="tab-content active" id="tab-stock">
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+
+    <div class="card" style="flex:1;min-width:300px">
+      <div class="ch">⚗ Stock Preparation</div>
+      <div class="cb">
+        <div class="f">
+          <label>Compound</label>
+          <div class="flex">
+            <input type="text" id="sp-name" placeholder="e.g. GSK2334470" style="flex:1" oninput="calcStock()">
+            <button class="btn btn-s" style="font-size:11px;white-space:nowrap" onclick="loadFromLibrary('stock')">Load ↓</button>
+          </div>
+        </div>
+        <div class="f">
+          <label>Molecular Weight <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(g/mol)</span></label>
+          <input type="number" id="sp-mw" placeholder="e.g. 412.5" min="0" step="any" oninput="calcStock()">
+        </div>
+        <div class="sep"></div>
+
+        <!-- Mode: from solid or from solution -->
+        <div class="f">
+          <label>Starting material</label>
+          <div style="display:flex;gap:6px">
+            <div class="btn btn-s" id="sp-mode-solid" onclick="setStockMode('solid')" style="flex:1;justify-content:center;font-size:11px">From solid (mg)</div>
+            <div class="btn btn-s" id="sp-mode-solution" onclick="setStockMode('solution')" style="flex:1;justify-content:center;font-size:11px">From solution</div>
+          </div>
+        </div>
+
+        <!-- Solid mode -->
+        <div id="sp-solid-fields">
+          <div class="f">
+            <label>Mass of compound</label>
+            <div class="unit-combo">
+              <input type="number" id="sp-mass" placeholder="e.g. 5" min="0" step="any" oninput="calcStock()">
+              <select id="sp-mass-unit" onchange="calcStock()">
+                <option value="mg">mg</option>
+                <option value="g">g</option>
+                <option value="µg">µg</option>
+              </select>
+            </div>
+          </div>
+          <div class="f">
+            <label>Target stock concentration</label>
+            <div class="unit-combo">
+              <input type="number" id="sp-target-conc" placeholder="e.g. 10" min="0" step="any" oninput="calcStock()">
+              <select id="sp-target-unit" onchange="calcStock()">
+                <option value="mM" selected>mM</option>
+                <option value="µM">µM</option>
+                <option value="mM">mM</option>
+                <option value="mg/mL">mg/mL</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Solution mode -->
+        <div id="sp-solution-fields" style="display:none">
+          <div class="f">
+            <label>Current concentration</label>
+            <div class="unit-combo">
+              <input type="number" id="sp-cur-conc" placeholder="e.g. 100" min="0" step="any" oninput="calcStock()">
+              <select id="sp-cur-unit" onchange="calcStock()">
+                <option value="mM" selected>mM</option>
+                <option value="µM">µM</option>
+                <option value="mg/mL">mg/mL</option>
+              </select>
+            </div>
+          </div>
+          <div class="f">
+            <label>Current volume</label>
+            <div class="unit-combo">
+              <input type="number" id="sp-cur-vol" placeholder="e.g. 1" min="0" step="any" oninput="calcStock()">
+              <select id="sp-cur-vol-unit" onchange="calcStock()">
+                <option value="mL" selected>mL</option>
+                <option value="µL">µL</option>
+              </select>
+            </div>
+          </div>
+          <div class="f">
+            <label>Target stock concentration</label>
+            <div class="unit-combo">
+              <input type="number" id="sp-sol-target-conc" placeholder="e.g. 10" min="0" step="any" oninput="calcStock()">
+              <select id="sp-sol-target-unit" onchange="calcStock()">
+                <option value="mM" selected>mM</option>
+                <option value="µM">µM</option>
+                <option value="mg/mL">mg/mL</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+        <div class="f">
+          <label>Solvent</label>
+          <div class="flex">
+            <select id="sp-solvent" onchange="calcStock()" style="flex:1">
+              <option value="DMSO">DMSO</option>
+              <option value="Water">Water</option>
+              <option value="EtOH">Ethanol</option>
+              <option value="PBS">PBS</option>
+              <option value="Other">Other</option>
+            </select>
+            <input type="text" id="sp-solvent-other" placeholder="Solvent name" style="display:none;width:110px;margin-left:6px" oninput="calcStock()">
+          </div>
+        </div>
+        <div class="f">
+          <label>Max solubility in solvent <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(optional, mg/mL)</span></label>
+          <input type="number" id="sp-max-sol" placeholder="leave blank if unknown" min="0" step="any" oninput="calcStock()">
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ch">📊 Result</div>
+        <div class="cb">
+          <div id="sp-result-area"><div class="notice ni">Fill in compound details to calculate.</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch">💾 Save to Records</div>
+        <div class="cb">
+          <div id="sp-save-preview" style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;background:var(--surface2);border-radius:5px;padding:8px 10px">Calculate a stock preparation above to enable saving.</div>
+          <div class="f">
+            <label>Notes (optional)</label>
+            <input type="text" id="sp-notes" placeholder="e.g. Batch #, storage conditions...">
+          </div>
+          <button class="btn btn-p" style="width:100%" onclick="saveToLibrary()" id="sp-save-btn" disabled>+ Add to Records</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TAB 2: Working Dilution ── -->
+<div class="tab-content" id="tab-dilution">
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+
+    <div class="card" style="flex:1;min-width:300px">
+      <div class="ch">🧪 Working Dilution (C₁V₁ = C₂V₂)</div>
+      <div class="cb">
+        <div class="f">
+          <label>Compound</label>
+          <div class="flex">
+            <input type="text" id="wd-name" placeholder="e.g. GSK2334470" style="flex:1">
+            <button class="btn btn-s" style="font-size:11px;white-space:nowrap" onclick="loadFromLibrary('dilution')">Load ↓</button>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Stock concentration <span style="text-transform:none;letter-spacing:0">(C₁)</span></label>
+          <div class="unit-combo">
+            <input type="number" id="wd-c1" placeholder="e.g. 10" min="0" step="any" oninput="calcDilution()">
+            <select id="wd-c1-unit" onchange="calcDilution()">
+              <option value="mM" selected>mM</option>
+              <option value="µM">µM</option>
+              <option value="nM">nM</option>
+              <option value="mg/mL">mg/mL</option>
+              <option value="µg/mL">µg/mL</option>
+            </select>
+          </div>
+        </div>
+        <div class="f">
+          <label>Target concentration <span style="text-transform:none;letter-spacing:0">(C₂)</span></label>
+          <div class="unit-combo">
+            <input type="number" id="wd-c2" placeholder="e.g. 10" min="0" step="any" oninput="calcDilution()">
+            <select id="wd-c2-unit" onchange="calcDilution()">
+              <option value="mM">mM</option>
+              <option value="µM" selected>µM</option>
+              <option value="nM">nM</option>
+              <option value="mg/mL">mg/mL</option>
+              <option value="µg/mL">µg/mL</option>
+            </select>
+          </div>
+        </div>
+        <div class="f">
+          <label>Final volume needed <span style="text-transform:none;letter-spacing:0">(V₂)</span></label>
+          <div class="unit-combo">
+            <input type="number" id="wd-v2" placeholder="e.g. 1" min="0" step="any" oninput="calcDilution()">
+            <select id="wd-v2-unit" onchange="calcDilution()">
+              <option value="mL" selected>mL</option>
+              <option value="µL">µL</option>
+            </select>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="f">
+          <label>Solvent / diluent</label>
+          <select id="wd-solvent" onchange="calcDilution()">
+            <option value="Media">Cell culture media</option>
+            <option value="PBS">PBS</option>
+            <option value="Water">Water</option>
+            <option value="DMSO">DMSO</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="f">
+          <label>DMSO limit in final solution <span style="text-transform:none;letter-spacing:0">(%)</span></label>
+          <input type="number" id="wd-dmso-limit" value="0.1" min="0" max="100" step="0.01" oninput="calcDilution()">
+        </div>
+        <div class="f" id="wd-stock-solvent-row" style="display:none">
+          <label>Stock solvent</label>
+          <select id="wd-stock-solvent" onchange="calcDilution()">
+            <option value="DMSO">DMSO</option>
+            <option value="Water">Water</option>
+            <option value="EtOH">Ethanol</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1;min-width:280px">
+      <div class="ch">📊 Result</div>
+      <div class="cb">
+        <div id="wd-result-area"><div class="notice ni">Fill in concentrations and final volume to calculate.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TAB 3: Library ── -->
+<div class="tab-content" id="tab-library">
+  <div class="card">
+    <div class="ch">📚 Stock Prep Records
+      <span style="flex:1"></span>
+      <span id="lib-count" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="cb" style="padding:0">
+      <!-- Session notice -->
+      <div style="padding:8px 12px;background:rgba(88,166,255,.06);border-bottom:1px solid var(--border);font-size:11px;color:var(--muted)">
+        ⓘ Records are stored for this session only. Use <b style="color:var(--text2)">Export MD</b> to save, <b style="color:var(--text2)">Import CSV</b> to restore.
+      </div>
+      <!-- Search + export -->
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="lib-search" placeholder="Search..." oninput="renderLibrary()" style="max-width:220px">
+        <div style="flex:1"></div>
+        <button class="btn btn-y" style="font-size:11px" onclick="exportLibraryMD()">⬇ Export MD</button>
+        <button class="btn btn-d" style="font-size:11px" onclick="clearLibrary()">✕ Clear All</button>
+      </div>
+      <!-- Table -->
+      <div style="overflow-x:auto">
+        <table class="lib">
+          <thead><tr>
+            <th>Compound</th>
+            <th>MW <span style="text-transform:none">(g/mol)</span></th>
+            <th>Mass</th>
+            <th>Solvent to add</th>
+            <th>Stock conc</th>
+            <th>As mg/mL</th>
+            <th>Solvent</th>
+            <th>Max sol. <span style="text-transform:none">(mg/mL)</span></th>
+            <th>Notes</th>
+            <th style="width:60px"></th>
+          </tr></thead>
+          <tbody id="lib-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+var lastStockResult = null;
+
+// ── Unit conversion helpers ────────────────────────────────────────────────────
+// All internal calcs in mM (concentration) and mL (volume) and mg (mass)
+function toMM(val, unit, mw) {
+  if (!val || isNaN(val)) return NaN;
+  if (unit === 'mM')     return val;
+  if (unit === 'µM')     return val / 1000;
+  if (unit === 'nM')     return val / 1e6;
+  if (unit === 'mg/mL')  return mw ? (val / mw) * 1000 : NaN;
+  if (unit === 'µg/mL')  return mw ? (val / mw) : NaN;
+  return NaN;
+}
+function fromMM(val, unit, mw) {
+  if (unit === 'mM')     return val;
+  if (unit === 'µM')     return val * 1000;
+  if (unit === 'nM')     return val * 1e6;
+  if (unit === 'mg/mL')  return mw ? (val * mw) / 1000 : NaN;
+  if (unit === 'µg/mL')  return mw ? (val * mw) : NaN;
+  return NaN;
+}
+function toML(val, unit) {
+  if (unit === 'mL') return val;
+  if (unit === 'µL') return val / 1000;
+  return val;
+}
+function fmtVol(ml) {
+  if (ml >= 1)   return ml.toFixed(3) + ' mL';
+  return (ml * 1000).toFixed(2) + ' µL';
+}
+function fmtConc(mM, unit, mw) {
+  var v = fromMM(mM, unit, mw);
+  if (isNaN(v)) return '—';
+  if (v >= 1000) return (v/1000).toFixed(2) + ' ' + (unit==='µM'?'mM':unit==='nM'?'µM':unit);
+  if (v < 0.001) return (v*1e6).toFixed(2) + ' p' + unit.replace('µ','');
+  return v.toFixed(4).replace(/\.?0+$/,'') + ' ' + unit;
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    var names = ['stock','dilution','library'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'library') renderLibrary();
+}
+
+// ── Stock mode ─────────────────────────────────────────────────────────────────
+var stockMode = 'solid';
+function setStockMode(mode) {
+  stockMode = mode;
+  document.getElementById('sp-mode-solid').className    = 'btn ' + (mode==='solid'    ? 'btn-p' : 'btn-s');
+  document.getElementById('sp-mode-solution').className = 'btn ' + (mode==='solution' ? 'btn-p' : 'btn-s');
+  document.getElementById('sp-solid-fields').style.display    = mode==='solid'    ? '' : 'none';
+  document.getElementById('sp-solution-fields').style.display = mode==='solution' ? '' : 'none';
+  calcStock();
+}
+setStockMode('solid');
+
+document.getElementById('sp-solvent').addEventListener('change', function(){
+  document.getElementById('sp-solvent-other').style.display = this.value==='Other' ? '' : 'none';
+  calcStock();
+});
+// dm-stock-solvent removed with DMSO tab
+
+// ── Stock Prep Calculation ─────────────────────────────────────────────────────
+function updateSavePreview() {
+  var preview = document.getElementById('sp-save-preview');
+  var btn = document.getElementById('sp-save-btn');
+  if (!preview || !btn) return;
+  if (!lastStockResult) {
+    preview.innerHTML = '<span style="color:var(--muted)">Calculate a stock preparation above to enable saving.</span>';
+    btn.disabled = true;
+    return;
+  }
+  var r = lastStockResult;
+  var nameStr = r.name || '<em style="color:var(--muted)">unnamed</em>';
+  var html = '<b style="color:var(--text)">' + (r.name||'Compound') + '</b> &nbsp;';
+  if (r.mw) html += r.mw + ' g/mol &nbsp;';
+  html += '<span style="color:var(--accent);font-family:var(--mono)">' + r.stock + ' ' + r.stockUnit + '</span> in ' + r.solvent;
+  if (r.mode === 'solid') html += '<br>From ' + r.massVal + ' ' + r.massUnit + ' → add ' + fmtVol(r.volMl) + ' ' + r.solvent;
+  else html += '<br>Diluted to ' + fmtVol(r.volMl);
+  preview.innerHTML = html;
+  btn.disabled = false;
+}
+
+function calcStock() {
+  var el = document.getElementById('sp-result-area');
+  var mw = parseFloat(document.getElementById('sp-mw').value);
+  var solvent = document.getElementById('sp-solvent').value;
+  if (solvent === 'Other') solvent = document.getElementById('sp-solvent-other').value || 'solvent';
+  var maxSol = parseFloat(document.getElementById('sp-max-sol').value); // mg/mL
+
+  var html = '';
+
+  if (stockMode === 'solid') {
+    var massVal  = parseFloat(document.getElementById('sp-mass').value);
+    var massUnit = document.getElementById('sp-mass-unit').value;
+    var targConc = parseFloat(document.getElementById('sp-target-conc').value);
+    var targUnit = document.getElementById('sp-target-unit').value;
+
+    if (!massVal || !targConc) { el.innerHTML='<div class="notice ni">Enter mass and target concentration.</div>'; lastStockResult=null; updateSavePreview(); return; }
+
+    // Convert mass to mg
+    var massMg = massUnit==='mg' ? massVal : massUnit==='g' ? massVal*1000 : massVal/1000;
+
+    var volMl;
+    if (targUnit === 'mg/mL') {
+      volMl = massMg / targConc;
+    } else {
+      if (!mw) { el.innerHTML='<div class="notice nw">Enter molecular weight to calculate molar concentration.</div>'; return; }
+      var targMM = toMM(targConc, targUnit, mw);
+      // moles = mass(g) / MW  → mmol = massMg / MW
+      var mmol = massMg / mw;
+      volMl = (mmol / targMM) * 1000; // mL: mmol/mM = L, so ×1000
+    }
+
+    html += '<div class="result-grid">';
+    html += '<div class="result-box"><div class="result-val">' + fmtVol(volMl) + '</div><div class="result-lbl">Solvent to add</div></div>';
+    html += '<div class="result-box"><div class="result-val">' + targConc + ' ' + targUnit + '</div><div class="result-lbl">Stock concentration</div></div>';
+    if (mw) {
+      var concMgMl = massMg / volMl;
+      html += '<div class="result-box"><div class="result-val">' + concMgMl.toFixed(2) + ' mg/mL</div><div class="result-lbl">As mg/mL</div></div>';
+    }
+    html += '</div>';
+    html += '<div class="notice ns">Add ' + fmtVol(volMl) + ' ' + solvent + ' to ' + massVal + ' ' + massUnit + ' to make ' + targConc + ' ' + targUnit + ' stock.</div>';
+    lastStockResult = { name: document.getElementById('sp-name').value.trim(), mw: mw||null, stock: targConc, stockUnit: targUnit, solvent: solvent, maxSol: isNaN(maxSol)?null:maxSol, volMl: volMl, massMg: massMg, massVal: massVal, massUnit: massUnit, mode: 'solid' };
+    updateSavePreview();
+
+    // Solubility check
+    if (!isNaN(maxSol) && mw) {
+      var concMgMl2 = massMg / volMl;
+      if (concMgMl2 > maxSol) {
+        html += '<div class="notice nr">⚠ Required concentration (' + concMgMl2.toFixed(2) + ' mg/mL) exceeds max solubility (' + maxSol + ' mg/mL) in ' + solvent + '. Reduce stock concentration or use a different solvent.</div>';
+      } else {
+        html += '<div class="notice ns">✓ Within solubility limit (' + maxSol + ' mg/mL in ' + solvent + ').</div>';
+      }
+    }
+
+  } else {
+    // Solution mode — C1V1 = C2V2 to make a new concentration
+    var c1Val = parseFloat(document.getElementById('sp-cur-conc').value);
+    var c1Unit = document.getElementById('sp-cur-unit').value;
+    var v1Val = parseFloat(document.getElementById('sp-cur-vol').value);
+    var v1Unit = document.getElementById('sp-cur-vol-unit').value;
+    var c2Val = parseFloat(document.getElementById('sp-sol-target-conc').value);
+    var c2Unit = document.getElementById('sp-sol-target-unit').value;
+
+    if (!c1Val || !c2Val || !v1Val) { el.innerHTML='<div class="notice ni">Enter current concentration, volume, and target concentration.</div>'; lastStockResult=null; updateSavePreview(); return; }
+
+    var c1mM = toMM(c1Val, c1Unit, mw);
+    var c2mM = toMM(c2Val, c2Unit, mw);
+    var v1mL = toML(v1Val, v1Unit);
+
+    if (isNaN(c1mM)||isNaN(c2mM)) { el.innerHTML='<div class="notice nw">Cannot convert units — enter MW for molar calculations.</div>'; return; }
+    if (c2mM > c1mM) { el.innerHTML='<div class="notice nr">Target concentration is higher than current — cannot dilute up.</div>'; return; }
+
+    var v2mL = (c1mM * v1mL) / c2mM;
+    var addmL = v2mL - v1mL;
+
+    html += '<div class="result-grid">';
+    html += '<div class="result-box"><div class="result-val">' + fmtVol(addmL) + '</div><div class="result-lbl">Solvent to add</div></div>';
+    html += '<div class="result-box"><div class="result-val">' + fmtVol(v2mL) + '</div><div class="result-lbl">Total final volume</div></div>';
+    html += '<div class="result-box"><div class="result-val">' + c2Val + ' ' + c2Unit + '</div><div class="result-lbl">Final concentration</div></div>';
+    html += '</div>';
+    html += '<div class="notice ns">Add ' + fmtVol(addmL) + ' ' + solvent + ' to your ' + fmtVol(v1mL) + ' of ' + c1Val + ' ' + c1Unit + ' solution.</div>';
+    lastStockResult = { name: document.getElementById('sp-name').value.trim(), mw: mw||null, stock: c2Val, stockUnit: c2Unit, solvent: solvent, maxSol: isNaN(maxSol)?null:maxSol, volMl: v2mL, mode: 'solution' };
+    updateSavePreview();
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Working Dilution ───────────────────────────────────────────────────────────
+function calcDilution() {
+  var el = document.getElementById('wd-result-area');
+  var c1Val  = parseFloat(document.getElementById('wd-c1').value);
+  var c1Unit = document.getElementById('wd-c1-unit').value;
+  var c2Val  = parseFloat(document.getElementById('wd-c2').value);
+  var c2Unit = document.getElementById('wd-c2-unit').value;
+  var v2Val  = parseFloat(document.getElementById('wd-v2').value);
+  var v2Unit = document.getElementById('wd-v2-unit').value;
+  var solvent = document.getElementById('wd-solvent').value;
+  var dmsoLimit = parseFloat(document.getElementById('wd-dmso-limit').value) || 0.1;
+
+  // Show stock solvent field if diluent is not DMSO (to track DMSO carry-over)
+  var stockSolRow = document.getElementById('wd-stock-solvent-row');
+  stockSolRow.style.display = solvent !== 'DMSO' ? '' : 'none';
+  var stockSolvent = document.getElementById('wd-stock-solvent').value;
+
+  if (!c1Val || !c2Val || !v2Val) { el.innerHTML='<div class="notice ni">Enter stock conc, target conc, and final volume.</div>'; return; }
+
+  // Convert to common units — try direct ratio if same family
+  // Simplified: convert both to mM if possible (molar), or mg/mL if mass-based
+  var isMolar = ['mM','µM','nM'].includes(c1Unit) && ['mM','µM','nM'].includes(c2Unit);
+  var isMass  = ['mg/mL','µg/mL'].includes(c1Unit) && ['mg/mL','µg/mL'].includes(c2Unit);
+
+  var c1mM, c2mM;
+  if (isMolar) {
+    c1mM = toMM(c1Val, c1Unit, null);
+    c2mM = toMM(c2Val, c2Unit, null);
+  } else if (isMass) {
+    // treat mg/mL as mM proxy for ratio
+    var f = {'mg/mL':1,'µg/mL':0.001};
+    c1mM = c1Val * f[c1Unit];
+    c2mM = c2Val * f[c2Unit];
+  } else {
+    el.innerHTML='<div class="notice nw">Mix of molar and mass units — please use consistent unit types for C₁ and C₂.</div>'; return;
+  }
+
+  if (c2mM > c1mM) { el.innerHTML='<div class="notice nr">Target concentration is higher than stock — cannot dilute up.</div>'; return; }
+  if (c2mM <= 0 || c1mM <= 0) { el.innerHTML='<div class="notice nr">Concentrations must be greater than zero.</div>'; return; }
+
+  var v2mL = toML(v2Val, v2Unit);
+  var v1mL = (c2mM * v2mL) / c1mM;  // C1V1=C2V2
+  var dilMl = v2mL - v1mL;
+
+  var html = '<div class="result-grid">';
+  html += '<div class="result-box"><div class="result-val">' + fmtVol(v1mL) + '</div><div class="result-lbl">Stock to take (V₁)</div></div>';
+  html += '<div class="result-box"><div class="result-val">' + fmtVol(dilMl) + '</div><div class="result-lbl">' + solvent + ' to add</div></div>';
+  html += '<div class="result-box"><div class="result-val">' + fmtVol(v2mL) + '</div><div class="result-lbl">Total volume</div></div>';
+  html += '<div class="result-box"><div class="result-val">1 : ' + (c1mM/c2mM).toFixed(1) + '</div><div class="result-lbl">Dilution factor</div></div>';
+  html += '</div>';
+  html += '<div class="notice ns">Take ' + fmtVol(v1mL) + ' of stock, add ' + fmtVol(dilMl) + ' ' + solvent + ' to reach ' + c2Val + ' ' + c2Unit + '.</div>';
+
+  // DMSO check if stock is in DMSO
+  if (stockSolvent === 'DMSO' && solvent !== 'DMSO') {
+    var dmsoPct = (v1mL / v2mL) * 100;
+    var dmsoCls = dmsoPct <= dmsoLimit ? 'ns' : dmsoPct <= dmsoLimit*5 ? 'nw' : 'nr';
+    var dmsoIcon = dmsoPct <= dmsoLimit ? '✓' : '⚠';
+    html += '<div class="notice ' + dmsoCls + '">' + dmsoIcon + ' DMSO carry-over: <b>' + dmsoPct.toFixed(4) + '%</b> (limit: ' + dmsoLimit + '%). ';
+    if (dmsoPct > dmsoLimit) html += 'Consider diluting the stock in DMSO first to reduce carry-over.';
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Library ────────────────────────────────────────────────────────────────────
+var library = [];
+
+function clearLibrary() {
+  if (!library.length) return;
+  if (!confirm('Clear all ' + library.length + ' record(s)?')) return;
+  library = [];
+  saveLibrary();
+}
+
+function loadLibrary() {
+  // localStorage is unreliable in iframes — library lives in memory this session.
+  // Use Export MD / Import CSV to persist between sessions.
+  library = [];
+}
+
+function saveLibrary() {
+  // In-memory only — no localStorage in iframe context.
+  renderLibrary();
+}
+
+function addLibEntry() {
+  var name   = document.getElementById('lib-new-name').value.trim();
+  var mw     = parseFloat(document.getElementById('lib-new-mw').value);
+  var stock  = parseFloat(document.getElementById('lib-new-stock').value);
+  var sUnit  = document.getElementById('lib-new-stock-unit').value;
+  var sol    = parseFloat(document.getElementById('lib-new-sol').value);
+  var solSolvent = document.getElementById('lib-new-sol-solvent').value;
+  var solvent= document.getElementById('lib-new-solvent').value;
+  var tc     = parseFloat(document.getElementById('lib-new-tc').value);
+  var tcUnit = document.getElementById('lib-new-tc-unit').value;
+  var fv     = parseFloat(document.getElementById('lib-new-fv').value);
+  var fvUnit = document.getElementById('lib-new-fv-unit').value;
+  var diluent= document.getElementById('lib-new-diluent').value;
+  var dmsoLim= parseFloat(document.getElementById('lib-new-dmso-limit').value) || 0.1;
+  if (!name) { alert('Enter a compound name.'); return; }
+  library.push({ id: Date.now(), name:name, mw:isNaN(mw)?null:mw, stock:isNaN(stock)?null:stock, stockUnit:sUnit, maxSol:isNaN(sol)?null:sol, solSolvent:solSolvent, solvent:solvent,
+    tc:isNaN(tc)?null:tc, tcUnit:tcUnit, fv:isNaN(fv)?null:fv, fvUnit:fvUnit, diluent:diluent, dmsoLimit:dmsoLim });
+  saveLibrary();
+  document.getElementById('lib-new-name').value='';
+  document.getElementById('lib-new-mw').value='';
+  document.getElementById('lib-new-stock').value='';
+  document.getElementById('lib-new-sol').value='';
+  document.getElementById('lib-new-tc').value='';
+  document.getElementById('lib-new-fv').value='';
+}
+
+function deleteLibEntry(id) {
+  library = library.filter(function(c){ return c.id !== id; });
+  saveLibrary();
+}
+
+function renderLibrary() {
+  var query = (document.getElementById('lib-search')||{}).value||'';
+  query = query.toLowerCase();
+  var tbody = document.getElementById('lib-body');
+  if (!tbody) return;
+  var filtered = library.filter(function(c){ return !query || c.name.toLowerCase().includes(query); });
+  var countEl = document.getElementById('lib-count');
+  if (countEl) countEl.textContent = library.length + ' record' + (library.length!==1?'s':'');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">'
+      + (query ? 'No matches.' : 'No records yet — save a stock preparation above.') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(c){
+    var massStr = c.massVal != null ? c.massVal + ' ' + (c.massUnit||'mg') : '—';
+    var volStr  = fmtVol(c.volMl);
+    var stockStr= c.stock != null ? c.stock + ' ' + c.stockUnit : '—';
+    var mgmlStr = c.concMgMl != null ? c.concMgMl.toFixed(2) + ' mg/mL' : '—';
+    var solStr  = c.maxSol != null ? c.maxSol + ' mg/mL' : '—';
+    var solWarn = c.concMgMl != null && c.maxSol != null && c.concMgMl > c.maxSol
+      ? ' style="color:var(--red)"' : '';
+    return '<tr>'
+      + '<td><b style="color:var(--text)">' + c.name + '</b></td>'
+      + '<td>' + (c.mw != null ? c.mw : '—') + '</td>'
+      + '<td>' + massStr + '</td>'
+      + '<td style="color:var(--accent);font-family:var(--mono)">' + volStr + ' ' + c.solvent + '</td>'
+      + '<td style="font-family:var(--mono)">' + stockStr + '</td>'
+      + '<td style="font-family:var(--mono)"' + solWarn + '>' + mgmlStr + '</td>'
+      + '<td>' + (c.solvent||'—') + '</td>'
+      + '<td' + solWarn + '>' + solStr + '</td>'
+      + '<td style="color:var(--muted);font-size:10px">' + (c.notes||'') + '</td>'
+      + '<td><button class="btn btn-d" style="font-size:10px;padding:2px 7px" onclick="deleteLibEntry(' + c.id + ')">✕</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+
+function loadLibrary() {
+  // localStorage is unreliable in iframes — library lives in memory this session.
+  // Use Export MD / Import CSV to persist between sessions.
+  library = [];
+}
+
+function saveLibrary() {
+  // In-memory only — no localStorage in iframe context.
+  renderLibrary();
+}
+
+function addLibEntry() {
+  var name   = document.getElementById('lib-new-name').value.trim();
+  var mw     = parseFloat(document.getElementById('lib-new-mw').value);
+  var stock  = parseFloat(document.getElementById('lib-new-stock').value);
+  var sUnit  = document.getElementById('lib-new-stock-unit').value;
+  var sol    = parseFloat(document.getElementById('lib-new-sol').value);
+  var solSolvent = document.getElementById('lib-new-sol-solvent').value;
+  var solvent= document.getElementById('lib-new-solvent').value;
+  var tc     = parseFloat(document.getElementById('lib-new-tc').value);
+  var tcUnit = document.getElementById('lib-new-tc-unit').value;
+  var fv     = parseFloat(document.getElementById('lib-new-fv').value);
+  var fvUnit = document.getElementById('lib-new-fv-unit').value;
+  var diluent= document.getElementById('lib-new-diluent').value;
+  var dmsoLim= parseFloat(document.getElementById('lib-new-dmso-limit').value) || 0.1;
+  if (!name) { alert('Enter a compound name.'); return; }
+  library.push({ id: Date.now(), name:name, mw:isNaN(mw)?null:mw, stock:isNaN(stock)?null:stock, stockUnit:sUnit, maxSol:isNaN(sol)?null:sol, solSolvent:solSolvent, solvent:solvent,
+    tc:isNaN(tc)?null:tc, tcUnit:tcUnit, fv:isNaN(fv)?null:fv, fvUnit:fvUnit, diluent:diluent, dmsoLimit:dmsoLim });
+  saveLibrary();
+  document.getElementById('lib-new-name').value='';
+  document.getElementById('lib-new-mw').value='';
+  document.getElementById('lib-new-stock').value='';
+  document.getElementById('lib-new-sol').value='';
+  document.getElementById('lib-new-tc').value='';
+  document.getElementById('lib-new-fv').value='';
+}
+
+function deleteLibEntry(id) {
+  library = library.filter(function(c){ return c.id !== id; });
+  saveLibrary();
+}
+
+function calcLibDilution(c) {
+  if (!c.stock || !c.tc || !c.fv) return null;
+  var molarFactor = {'mM':1,'µM':0.001,'nM':0.000001,'mg/mL':1,'µg/mL':0.001};
+  var c1mM = c.stock  * (molarFactor[c.stockUnit] || 1);
+  var c2mM = c.tc     * (molarFactor[c.tcUnit]    || 0.001);
+  if (c2mM > c1mM || c1mM <= 0 || c2mM <= 0) return null;
+  var v2mL = toML(c.fv, c.fvUnit || 'mL');
+  var v1mL = (c2mM * v2mL) / c1mM;
+  var dilMl = v2mL - v1mL;
+  // DMSO carry-over: only if stock solvent is DMSO and diluent is not DMSO
+  var dmsoPct = null;
+  if (c.solvent === 'DMSO' && c.diluent !== 'DMSO') {
+    dmsoPct = (v1mL / v2mL) * 100;
+  }
+  return { v1mL:v1mL, dilMl:dilMl, v2mL:v2mL, df:c1mM/c2mM, dmsoPct:dmsoPct };
+}
+
+function renderLibrary() {
+  var query = document.getElementById('lib-search').value.toLowerCase();
+  var tbody = document.getElementById('lib-body');
+  var filtered = library.filter(function(c){ return !query || c.name.toLowerCase().includes(query); });
+  document.getElementById('lib-count').textContent = library.length + ' compound' + (library.length!==1?'s':'');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">' + (query ? 'No matches.' : 'No compounds yet — add one above.') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(c){
+    var dil = calcLibDilution(c);
+    var dmsoStr = '—', dmsoCls = '';
+    if (dil && dil.dmsoPct !== null) {
+      dmsoStr = dil.dmsoPct.toFixed(3) + '%';
+      dmsoCls = dil.dmsoPct <= (c.dmsoLimit||0.1) ? 'dmso-ok' : dil.dmsoPct <= (c.dmsoLimit||0.1)*5 ? 'dmso-warn' : 'dmso-err';
+    }
+    return '<tr onclick="loadCompound(' + c.id + ')">'
+      + '<td><span class="lib-name">' + c.name + '</span></td>'
+      + '<td>' + (c.mw != null ? c.mw : '—') + '</td>'
+      + '<td>' + (c.stock != null ? c.stock + ' ' + c.stockUnit : '—') + '</td>'
+      + '<td>' + (c.tc != null ? c.tc + ' ' + c.tcUnit : '—') + '</td>'
+      + '<td style="color:var(--accent);font-family:var(--mono)">' + (dil ? fmtVol(dil.v1mL) : '—') + '</td>'
+      + '<td style="font-family:var(--mono)">' + (dil ? fmtVol(dil.dilMl) + (c.diluent?' '+c.diluent:'') : '—') + '</td>'
+      + '<td class="' + dmsoCls + '" style="font-family:var(--mono)">' + dmsoStr + '</td>'
+      + '<td>' + (c.maxSol != null ? c.maxSol + ' mg/mL' : '—') + '</td>'
+      + '<td style="text-align:right">'
+      + '<button class="btn btn-s" style="font-size:10px;padding:3px 8px;margin-right:4px" onclick="event.stopPropagation();loadCompound(' + c.id + ')">Use</button>'
+      + '<button class="btn btn-d" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();deleteLibEntry(' + c.id + ')">✕</button>'
+      + '</td></tr>';
+  }).join('');
+}
+
+function loadCompound(id) {
+  var c = library.find(function(x){ return x.id === id; });
+  if (!c) return;
+  // Load into stock tab
+  document.getElementById('sp-name').value   = c.name;
+  document.getElementById('sp-mw').value     = c.mw != null ? c.mw : '';
+  document.getElementById('sp-max-sol').value= c.maxSol != null ? c.maxSol : '';
+  if (c.solvent) document.getElementById('sp-solvent').value = c.solvent;
+  // Load into dilution tab
+  document.getElementById('wd-name').value   = c.name;
+  if (c.stock != null) {
+    document.getElementById('wd-c1').value      = c.stock;
+    document.getElementById('wd-c1-unit').value = c.stockUnit || 'mM';
+  }
+  calcStock(); calcDilution();
+  switchTab('stock');
+}
+
+function loadFromLibrary(tab) {
+  var nameField = tab==='stock' ? 'sp-name' : 'wd-name';
+  var query = document.getElementById(nameField).value.trim().toLowerCase();
+  var match = library.find(function(c){ return c.name.toLowerCase().includes(query); });
+  if (!match && library.length) {
+    // Show picker
+    var names = library.map(function(c){ return c.name; }).join('\n');
+    var chosen = prompt('Type compound name to load (or pick):\n' + names);
+    if (!chosen) return;
+    match = library.find(function(c){ return c.name.toLowerCase().includes(chosen.toLowerCase()); });
+  }
+  if (match) loadCompound(match.id);
+  else alert('Compound not found in library.');
+}
+
+function saveToLibrary() {
+  if (!lastStockResult) { alert('Calculate a stock preparation first.'); return; }
+  var r = lastStockResult;
+  if (!r.name) { alert('Enter a compound name in the Stock Prep fields first.'); return; }
+  var notes = document.getElementById('sp-notes').value.trim();
+  library.push({
+    id: Date.now(), name: r.name,
+    mw: r.mw, stock: r.stock, stockUnit: r.stockUnit,
+    massVal: r.massVal||null, massUnit: r.massUnit||null,
+    volMl: r.volMl, solvent: r.solvent,
+    maxSol: r.maxSol, mode: r.mode,
+    concMgMl: (r.massMg && r.volMl) ? r.massMg/r.volMl : null,
+    notes: notes
+  });
+  saveLibrary();
+  document.getElementById('sp-notes').value = '';
+  var btn = document.getElementById('sp-save-btn');
+  if (btn) { btn.textContent = '✓ Added'; setTimeout(function(){ btn.textContent = '+ Add to Records'; }, 1500); }
+}
+
+
+function loadFromLibrary(tab) {
+  var nameField = tab==='stock' ? 'sp-name' : 'wd-name';
+  var query = document.getElementById(nameField).value.trim().toLowerCase();
+  var match = library.find(function(c){ return c.name.toLowerCase().includes(query); });
+  if (!match && library.length) {
+    // Show picker
+    var names = library.map(function(c){ return c.name; }).join('\n');
+    var chosen = prompt('Type compound name to load (or pick):\n' + names);
+    if (!chosen) return;
+    match = library.find(function(c){ return c.name.toLowerCase().includes(chosen.toLowerCase()); });
+  }
+  if (match) loadCompound(match.id);
+  else alert('Compound not found in library.');
+}
+
+function saveToLibrary() {
+  if (!lastStockResult) { alert('Calculate a stock preparation first.'); return; }
+  var r = lastStockResult;
+  if (!r.name) { alert('Enter a compound name in the Stock Prep fields first.'); return; }
+
+  // Read optional dilution fields from the save card
+  var tc       = parseFloat(document.getElementById('sp-tc').value);
+  var tcUnit   = document.getElementById('sp-tc-unit').value;
+  var fv       = parseFloat(document.getElementById('sp-fv').value);
+  var fvUnit   = document.getElementById('sp-fv-unit').value;
+  var diluent  = document.getElementById('sp-diluent').value;
+  var dmsoLim  = parseFloat(document.getElementById('sp-dmso-limit').value) || 0.1;
+
+  var existing = library.findIndex(function(c){ return c.name.toLowerCase()===r.name.toLowerCase(); });
+  var prev = existing>=0 ? library[existing] : {};
+  var entry = {
+    id: prev.id||Date.now(), name: r.name,
+    mw: r.mw, stock: r.stock, stockUnit: r.stockUnit,
+    maxSol: r.maxSol, solSolvent: r.solvent, solvent: r.solvent,
+    tc:       !isNaN(tc) ? tc       : (prev.tc       || null),
+    tcUnit:   tcUnit                 || (prev.tcUnit   || 'µM'),
+    fv:       !isNaN(fv) ? fv       : (prev.fv       || null),
+    fvUnit:   fvUnit                 || (prev.fvUnit   || 'mL'),
+    diluent:  diluent                || (prev.diluent  || 'Media'),
+    dmsoLimit: dmsoLim
+  };
+  if (existing >= 0) { library[existing] = entry; } else { library.push(entry); }
+  saveLibrary();
+  var btn = document.getElementById('sp-save-btn');
+  if (btn) { btn.textContent = '✓ Saved'; setTimeout(function(){ btn.textContent = '+ Save to Library'; }, 1500); }
+}
+
+
+
+
+// ── CSV Import / Export ────────────────────────────────────────────────────────
+function exportLibraryMD() {
+  if (!library.length) { alert('No records to export.'); return; }
+  var NL = String.fromCharCode(10);
+  var date = new Date().toLocaleDateString('en-AU', {day:'2-digit', month:'short', year:'numeric'});
+  var md = '# Stock Preparation Records' + NL;
+  md += '_Generated: ' + date + ' | Sarah Hancock' + String.fromCharCode(39) + 's Lab Tools_' + NL + NL;
+  md += '---' + NL + NL;
+  md += '| Compound | MW (g/mol) | Mass | Solvent to add | Stock conc | As mg/mL | Solvent | Max sol. (mg/mL) | Notes |' + NL;
+  md += '|---|---|---|---|---|---|---|---|---|' + NL;
+  library.forEach(function(c) {
+    var massStr  = c.massVal != null ? c.massVal + ' ' + (c.massUnit||'mg') : '—';
+    var volStr   = fmtVol(c.volMl);
+    var stockStr = c.stock != null ? c.stock + ' ' + c.stockUnit : '—';
+    var mgmlStr  = c.concMgMl != null ? c.concMgMl.toFixed(2) + ' mg/mL' : '—';
+    var solStr   = c.maxSol != null ? c.maxSol + ' mg/mL' : '—';
+    var solWarn  = c.concMgMl != null && c.maxSol != null && c.concMgMl > c.maxSol ? ' ⚠' : '';
+    md += '| ' + c.name
+      + ' | ' + (c.mw != null ? c.mw : '—')
+      + ' | ' + massStr
+      + ' | ' + volStr + ' ' + c.solvent
+      + ' | ' + stockStr
+      + ' | ' + mgmlStr + solWarn
+      + ' | ' + (c.solvent||'—')
+      + ' | ' + solStr
+      + ' | ' + (c.notes||'')
+      + ' |' + NL;
+  });
+  md += NL + '---' + NL;
+  md += '_Copy into LabArchives or any markdown notebook._' + NL;
+  var blob = new Blob([md], {type:'text/plain'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download='stock_prep_records.md';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+}
+
+
+function importLibraryCSV(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var lines = e.target.result.split(String.fromCharCode(10)).map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+    var added = 0;
+    lines.slice(1).forEach(function(line){
+      var parts = line.split(',').map(function(p){ return p.replace(/"/g,'').trim(); });
+      if (!parts[0]) return;
+      var existing = library.findIndex(function(c){ return c.name.toLowerCase()===parts[0].toLowerCase(); });
+      var entry = { id: existing>=0?library[existing].id:Date.now()+Math.random(), name:parts[0], mw:parts[1]?parseFloat(parts[1]):null, stock:parts[2]?parseFloat(parts[2]):null, stockUnit:parts[3]||'mM', maxSol:parts[4]?parseFloat(parts[4]):null, solSolvent:parts[5]||'DMSO', solvent:parts[6]||'DMSO', tc:parts[7]?parseFloat(parts[7]):null, tcUnit:parts[8]||'µM', fv:parts[9]?parseFloat(parts[9]):null, fvUnit:parts[10]||'mL', diluent:parts[11]||'Media', dmsoLimit:parts[12]?parseFloat(parts[12]):0.1 };
+      if (existing>=0) library[existing]=entry; else { library.push(entry); added++; }
+    });
+    saveLibrary();
+    alert('Import complete. ' + added + ' new compound(s) added.');
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadLibrary();
+renderLibrary();
+</script>
+</body>
+</html>
